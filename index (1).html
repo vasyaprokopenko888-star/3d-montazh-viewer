@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>3D Монтаж — Viewer v1</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#202124}
+    #app{width:100%;height:100%;position:relative}
+    #toolbar{
+      position:absolute;z-index:10;left:12px;top:12px;right:12px;
+      display:flex;gap:8px;align-items:center;flex-wrap:wrap
+    }
+    button,.fileLabel{
+      border:0;border-radius:10px;padding:10px 14px;background:#fff;color:#222;
+      cursor:pointer;font-size:14px;box-shadow:0 2px 8px #0004
+    }
+    .fileLabel input{display:none}
+    #status{
+      position:absolute;z-index:10;left:12px;bottom:12px;
+      background:#fff;padding:10px 13px;border-radius:10px;box-shadow:0 2px 8px #0004;
+      max-width:calc(100% - 24px)
+    }
+    #info{
+      position:absolute;z-index:10;right:12px;top:62px;width:270px;max-width:calc(100% - 24px);
+      background:#fff;border-radius:12px;padding:14px;box-shadow:0 3px 12px #0005;
+      display:none
+    }
+    #info b{display:block;margin-bottom:6px}
+    #hint{
+      position:absolute;z-index:5;inset:0;display:flex;align-items:center;justify-content:center;
+      color:#fff8;text-align:center;font-size:18px;pointer-events:none;padding:30px
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="toolbar">
+    <label class="fileLabel">📂 Відкрити модель
+      <input id="file" type="file" accept=".dae,.glb,.gltf">
+    </label>
+    <button id="reset">↺ Скинути вигляд</button>
+    <button id="transparency">● Звичайний вигляд</button>
+  </div>
+  <div id="info"></div>
+  <div id="hint">Вибери файл <b>.DAE</b> і відкрий його.<br>Потім крути модель та натискай на деталі.</div>
+  <div id="status">Готово. Версія 1.</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const app = document.getElementById('app');
+const fileInput = document.getElementById('file');
+const status = document.getElementById('status');
+const info = document.getElementById('info');
+const hint = document.getElementById('hint');
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf0f0f0);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.01, 100000);
+camera.position.set(2,2,3);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+app.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.screenSpacePanning = true;
+controls.minDistance = 0.05;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x777777, 2.2));
+const dl = new THREE.DirectionalLight(0xffffff, 2.0);
+dl.position.set(4,8,6);
+scene.add(dl);
+const fill = new THREE.DirectionalLight(0xffffff, 1.2);
+fill.position.set(-5,3,-4);
+scene.add(fill);
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+let model = null;
+let selectedRoot = null;
+let originalMaterials = new Map();
+let transparentMode = true;
+
+function cleanName(name){
+  if(!name) return 'Без назви';
+  let s = name.replace(/^__/, '');
+  s = s.replace(/^\d+\._/, '');
+  s = s.replace(/_/g,' ');
+  return s.trim();
+}
+
+function findDetailRoot(obj){
+  let p = obj;
+  while(p){
+    const n = p.name || '';
+    if(n.startsWith('__')) return p;
+    p = p.parent;
+  }
+  return obj;
+}
+
+
+function setMaterialTransparency(material, enabled){
+  if(!material) return;
+  if(Array.isArray(material)){
+    material.forEach(m=>setMaterialTransparency(m, enabled));
+    return;
+  }
+  material.transparent = enabled;
+  material.opacity = enabled ? 0.5 : 1;
+  material.depthWrite = !enabled;
+  material.needsUpdate = true;
+}
+
+function applyTransparency(){
+  if(!model) return;
+  model.traverse(o=>{
+    if(o.isMesh) setMaterialTransparency(o.material, transparentMode);
+  });
+}
+
+function repairMaterial(material){
+  if(!material) return;
+  if(Array.isArray(material)){
+    material.forEach(repairMaterial);
+    return;
+  }
+
+  // DAE зі SketchUp іноді завантажує матеріал майже чорним.
+  // Якщо є текстура, робимо базовий колір білим, щоб текстура показувалась правильно.
+  if(material.map){
+    if(material.color) material.color.set(0xffffff);
+    material.map.colorSpace = THREE.SRGBColorSpace;
+    material.map.needsUpdate = true;
+  } else if(material.color){
+    const c = material.color;
+    const maxChannel = Math.max(c.r,c.g,c.b);
+    if(maxChannel < 0.035) material.color.set(0xd8d8d8);
+  }
+
+  material.side = THREE.DoubleSide;
+  material.needsUpdate = true;
+}
+
+function repairModelMaterials(root){
+  root.traverse(o=>{
+    if(o.isMesh){
+      repairMaterial(o.material);
+    }
+  });
+}
+
+function getDetailDimensions(root){
+  // Рахуємо геометрію в локальній системі координат вибраної деталі,
+  // щоб поворот деталі у всій моделі не спотворював її габарити.
+  root.updateWorldMatrix(true,true);
+  const invRoot = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const box = new THREE.Box3();
+  box.makeEmpty();
+  const v = new THREE.Vector3();
+
+  root.traverse(o=>{
+    if(!o.isMesh || !o.geometry) return;
+    const pos = o.geometry.attributes.position;
+    if(!pos) return;
+    const toRoot = new THREE.Matrix4().multiplyMatrices(invRoot, o.matrixWorld);
+    for(let i=0;i<pos.count;i++){
+      v.fromBufferAttribute(pos,i).applyMatrix4(toRoot);
+      box.expandByPoint(v);
+    }
+  });
+
+  if(box.isEmpty()) return null;
+  const size = box.getSize(new THREE.Vector3());
+  let vals = [Math.abs(size.x),Math.abs(size.y),Math.abs(size.z)];
+
+  // SketchUp/Collada зазвичай приходить у метрах у Three.js. Якщо модель
+  // явно вже в мм, масштаб не множимо. Евристика працює для меблевих деталей.
+  const maxVal = Math.max(...vals);
+  const factor = maxVal < 20 ? 1000 : 1;
+  vals = vals.map(x=>x*factor).sort((a,b)=>b-a);
+  return {a:Math.round(vals[0]), b:Math.round(vals[1]), t:Math.round(vals[2])};
+}
+
+function clearSelection(){
+  if(!selectedRoot) return;
+  selectedRoot.traverse(o=>{
+    if(o.isMesh && originalMaterials.has(o)){
+      o.material = originalMaterials.get(o);
+    }
+  });
+  originalMaterials.clear();
+  selectedRoot = null;
+  info.style.display='none';
+}
+
+function selectObject(obj){
+  clearSelection();
+  selectedRoot = findDetailRoot(obj);
+  selectedRoot.traverse(o=>{
+    if(o.isMesh){
+      originalMaterials.set(o,o.material);
+      const m = Array.isArray(o.material) ? o.material.map(x=>x.clone()) : o.material.clone();
+      const mats = Array.isArray(m) ? m : [m];
+      mats.forEach(mat=>{
+        mat.emissive = new THREE.Color(0xffb000);
+        mat.emissiveIntensity = 0.45;
+        setMaterialTransparency(mat, transparentMode);
+      });
+      o.material = m;
+    }
+  });
+  const d = getDetailDimensions(selectedRoot);
+  const dims = d ? '<div style="margin:8px 0;line-height:1.55"><b style="display:inline">Розміри:</b><br>'+d.a+' × '+d.b+' × '+d.t+' мм<br><span style="font-size:13px;color:#666">(довжина × ширина × товщина)</span></div>' : '';
+  info.innerHTML = '<b>Вибрана деталь</b><div style="font-size:20px;margin-bottom:8px">'+
+                   cleanName(selectedRoot.name)+'</div>'+dims+'<div>Натисни на іншу деталь, щоб вибрати її.</div>';
+  info.style.display='block';
+  status.textContent = 'Вибрано: ' + cleanName(selectedRoot.name);
+}
+
+function frameModel(object){
+  const box = new THREE.Box3().setFromObject(object);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const maxSize = Math.max(size.x,size.y,size.z);
+  const distance = maxSize / Math.tan(THREE.MathUtils.degToRad(camera.fov*0.5)) * 1.25;
+  camera.position.copy(center).add(new THREE.Vector3(distance,distance,distance));
+  camera.near = Math.max(maxSize/10000, 0.001);
+  camera.far = Math.max(maxSize*100, 1000);
+  camera.updateProjectionMatrix();
+  controls.target.copy(center);
+  controls.update();
+}
+
+function addModel(obj){
+  if(model) {
+    scene.remove(model);
+    model.traverse(o=>{
+      if(o.geometry) o.geometry.dispose();
+    });
+  }
+  model=obj;
+  scene.add(model);
+  clearSelection();
+  repairModelMaterials(model);
+  applyTransparency();
+  frameModel(model);
+  hint.style.display='none';
+  status.textContent='Модель відкрита. Крути її пальцем/мишкою та натискай на деталі.';
+}
+
+fileInput.addEventListener('change', async e=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  status.textContent='Завантаження: '+file.name;
+  const url=URL.createObjectURL(file);
+  try{
+    if(file.name.toLowerCase().endsWith('.dae')){
+      const loader=new ColladaLoader();
+      loader.load(url, data=>addModel(data.scene), undefined, err=>{
+        console.error(err);
+        status.textContent='Помилка відкриття DAE.';
+      });
+    } else {
+      const loader=new GLTFLoader();
+      loader.load(url, data=>addModel(data.scene), undefined, err=>{
+        console.error(err);
+        status.textContent='Помилка відкриття GLB/GLTF.';
+      });
+    }
+  } catch(err){
+    console.error(err);
+    status.textContent='Помилка: '+err.message;
+  } finally {
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+});
+
+renderer.domElement.addEventListener('pointerdown', e=>{
+  if(!model) return;
+  const rect=renderer.domElement.getBoundingClientRect();
+  pointer.x=((e.clientX-rect.left)/rect.width)*2-1;
+  pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(pointer,camera);
+  const hits=raycaster.intersectObject(model,true);
+  if(hits.length) selectObject(hits[0].object);
+});
+
+document.getElementById('reset').onclick=()=>{ if(model) frameModel(model); };
+
+document.getElementById('transparency').onclick=()=>{
+  transparentMode=!transparentMode;
+  applyTransparency();
+  document.getElementById('transparency').textContent = transparentMode ? '● Звичайний вигляд' : '◐ Напівпрозоро';
+  status.textContent = transparentMode ? 'Напівпрозорий режим: 50%. Внутрішні деталі видно краще.' : 'Звичайний режим: 100% непрозорість.';
+};
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene,camera);
+}
+animate();
+</script>
+</body>
+</html>
