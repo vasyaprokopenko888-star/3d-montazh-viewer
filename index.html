@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SKP Viewer Test</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#eee}
+#bar{position:absolute;z-index:10;top:12px;left:12px;right:12px;display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.94);padding:10px 12px;border-radius:10px;box-shadow:0 2px 12px #0002}
+button{border:0;border-radius:7px;padding:10px 14px;background:#222;color:#fff;font-weight:700;cursor:pointer}
+#status{font-size:14px;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#view{width:100%;height:100%}
+</style>
+<script type="importmap">
+{"imports":{
+"fflate":"https://cdn.jsdelivr.net/npm/fflate@0.8.0/+esm",
+"earcut":"https://cdn.jsdelivr.net/npm/earcut@3.0.0/+esm",
+"flatbuffers":"https://cdn.jsdelivr.net/npm/flatbuffers@25.9.23/+esm",
+"three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+"three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<div id="bar"><button id="open">📂 Відкрити SKP</button><span id="status">Готово. Вибери файл .skp</span></div>
+<input id="file" type="file" accept=".skp" hidden>
+<div id="view"></div>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {parseSkp,buildScene} from 'https://iamahsanmehmood.github.io/openskp/dist/index.mjs';
+
+const host=document.getElementById('view'), status=document.getElementById('status');
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0xeeeeee);
+const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,.01,10000);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace=THREE.SRGBColorSpace; host.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement); controls.enableDamping=true;
+scene.add(new THREE.HemisphereLight(0xffffff,0x777777,2));
+const dl=new THREE.DirectionalLight(0xffffff,2); dl.position.set(10,20,15); scene.add(dl);
+const group=new THREE.Group(); scene.add(group);
+let texUrls=[];
+
+function clear(){
+ while(group.children.length){let o=group.children.pop();o.geometry?.dispose();o.material?.dispose();}
+ texUrls.forEach(URL.revokeObjectURL); texUrls=[];
+}
+function fit(){
+ const b=new THREE.Box3().setFromObject(group); if(b.isEmpty())return;
+ const c=b.getCenter(new THREE.Vector3()), s=b.getSize(new THREE.Vector3());
+ const m=Math.max(s.x,s.y,s.z), d=m/(2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)))*1.45;
+ camera.near=Math.max(.001,m/10000); camera.far=Math.max(1000,d*20); camera.updateProjectionMatrix();
+ camera.position.set(c.x+d*.7,c.y+d*.5,c.z+d*.7); controls.target.copy(c); controls.update();
+}
+function sceneTexture(sc,i){
+ const t=sc.textures?.[i]; if(!t)return null;
+ const u=URL.createObjectURL(new Blob([t.data],{type:t.mimeType})); texUrls.push(u);
+ const tx=new THREE.TextureLoader().load(u); tx.colorSpace=THREE.SRGBColorSpace;
+ tx.wrapS=tx.wrapT=THREE.RepeatWrapping; return tx;
+}
+async function load(file){
+ status.textContent='Читаю SKP… це може зайняти кілька секунд.';
+ await new Promise(r=>setTimeout(r,50));
+ try{
+  clear();
+  const buf=await file.arrayBuffer();
+  const model=parseSkp(buf);
+  const sc=buildScene(buf);
+  const cache=new Map();
+  for(const p of (sc.glbPrimitives||[])){
+   const g=new THREE.BufferGeometry();
+   g.setAttribute('position',new THREE.BufferAttribute(p.positions,3));
+   if(p.normals?.length)g.setAttribute('normal',new THREE.BufferAttribute(p.normals,3));
+   if(p.uvs?.length)g.setAttribute('uv',new THREE.BufferAttribute(p.uvs,2));
+   g.setIndex(new THREE.BufferAttribute(p.indices,1));
+   const gm=sc.gltfMaterials?.[p.materialIndex];
+   const pbr=gm?.pbrMetallicRoughness;
+   const cf=pbr?.baseColorFactor||[.75,.75,.75,1];
+   const opts={color:new THREE.Color(cf[0],cf[1],cf[2]),roughness:.65,metalness:.05,side:THREE.DoubleSide};
+   const ti=pbr?.baseColorTexture?.index;
+   if(ti!==undefined){
+    if(!cache.has(ti))cache.set(ti,sceneTexture(sc,ti));
+    const tx=cache.get(ti); if(tx){opts.map=tx;opts.transparent=true;opts.alphaTest=.5;}
+   }
+   const mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial(opts));
+   mesh.userData=sc.meshIndex?.[p.geomName]||{};
+   group.add(mesh);
+  }
+  fit();
+  status.textContent=`Відкрито: ${file.name} • SKP ${model.version||''} • об'єктів: ${group.children.length} • текстур: ${sc.textures?.length||0}`;
+ }catch(e){console.error(e);status.textContent='Помилка: '+e.message;}
+}
+document.getElementById('open').onclick=()=>document.getElementById('file').click();
+document.getElementById('file').onchange=e=>e.target.files[0]&&load(e.target.files[0]);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+(function loop(){requestAnimationFrame(loop);controls.update();renderer.render(scene,camera)})();
+</script>
+</body></html>
