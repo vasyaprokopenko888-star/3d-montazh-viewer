@@ -41,6 +41,7 @@
       <input id="file" type="file" accept=".dae,.glb,.gltf">
     </label>
     <button id="reset">↺ Скинути вигляд</button>
+    <button id="transparency">◐ Напівпрозоро</button>
   </div>
   <div id="info"></div>
   <div id="hint">Вибери файл <b>.DAE</b> і відкрий його.<br>Потім крути модель та натискай на деталі.</div>
@@ -97,6 +98,7 @@ const pointer = new THREE.Vector2();
 let model = null;
 let selectedRoot = null;
 let originalMaterials = new Map();
+let transparentMode = true;
 
 function cleanName(name){
   if(!name) return 'Без назви';
@@ -114,6 +116,26 @@ function findDetailRoot(obj){
     p = p.parent;
   }
   return obj;
+}
+
+
+function setMaterialTransparency(material, enabled){
+  if(!material) return;
+  if(Array.isArray(material)){
+    material.forEach(m=>setMaterialTransparency(m, enabled));
+    return;
+  }
+  material.transparent = enabled;
+  material.opacity = enabled ? 0.5 : 1;
+  material.depthWrite = !enabled;
+  material.needsUpdate = true;
+}
+
+function applyTransparency(){
+  if(!model) return;
+  model.traverse(o=>{
+    if(o.isMesh) setMaterialTransparency(o.material, transparentMode);
+  });
 }
 
 function clearSelection(){
@@ -134,9 +156,13 @@ function selectObject(obj){
   selectedRoot.traverse(o=>{
     if(o.isMesh){
       originalMaterials.set(o,o.material);
-      const m = o.material.clone();
-      m.emissive = new THREE.Color(0xffb000);
-      m.emissiveIntensity = 0.45;
+      const m = Array.isArray(o.material) ? o.material.map(x=>x.clone()) : o.material.clone();
+      const mats = Array.isArray(m) ? m : [m];
+      mats.forEach(mat=>{
+        mat.emissive = new THREE.Color(0xffb000);
+        mat.emissiveIntensity = 0.45;
+        setMaterialTransparency(mat, transparentMode);
+      });
       o.material = m;
     }
   });
@@ -170,6 +196,7 @@ function addModel(obj){
   model=obj;
   scene.add(model);
   clearSelection();
+  applyTransparency();
   frameModel(model);
   hint.style.display='none';
   status.textContent='Модель відкрита. Крути її пальцем/мишкою та натискай на деталі.';
@@ -213,6 +240,13 @@ renderer.domElement.addEventListener('pointerdown', e=>{
 });
 
 document.getElementById('reset').onclick=()=>{ if(model) frameModel(model); };
+
+document.getElementById('transparency').onclick=()=>{
+  transparentMode=!transparentMode;
+  applyTransparency();
+  document.getElementById('transparency').textContent = transparentMode ? '◐ Напівпрозоро' : '● Звичайний вигляд';
+  status.textContent = transparentMode ? 'Напівпрозорий режим: 50%. Внутрішні деталі видно краще.' : 'Звичайний режим: 100% непрозорість.';
+};
 
 addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight;
