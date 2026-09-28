@@ -44,11 +44,34 @@ function eachMat(o,fn){if(!o.material)return;(Array.isArray(o.material)?o.materi
 function cloneMaterials(){model.traverse(o=>{if(o.isMesh&&o.material)o.material=Array.isArray(o.material)?o.material.map(m=>m.clone()):o.material.clone()})}
 function applyOpacity(){
  if(!model)return;
- const pct=+$('opacity').value, a=1-pct/100; $('opacityText').textContent=pct+'%';
- model.traverse(o=>{if(!o.isMesh)return;const keep=isService(o)||isService(o.parent)||o===selected;
-   eachMat(o,m=>{m.transparent=!keep&&pct>0;m.opacity=keep?1:a;m.depthWrite=keep||a>.72;m.side=THREE.DoubleSide;
-     if(m.emissive){if(m.userData.baseEm===undefined)m.userData.baseEm=m.emissive.getHex();m.emissive.setHex(o===selected?0xff7800:m.userData.baseEm)}
-     m.needsUpdate=true;});
+ const pct=+$('opacity').value;
+ $('opacityText').textContent=pct+'%';
+
+ // Повзунок означає силу «рентгену», але панелі ніколи не стають майже невидимими.
+ // 0% = оригінальний матеріал; 100% = все ще 28% непрозорості.
+ const a=1-(pct/100)*0.72;
+
+ model.traverse(o=>{
+   if(!o.isMesh)return;
+   const keep=isService(o)||isService(o.parent)||o===selected;
+   eachMat(o,m=>{
+     if(m.userData.baseOpacity===undefined) m.userData.baseOpacity=(m.opacity==null?1:m.opacity);
+     const base=Math.max(.01,m.userData.baseOpacity);
+     m.transparent=!keep && pct>0;
+     m.opacity=keep ? base : Math.max(.28,base*a);
+     // Для багатьох вкладених прозорих панелей depthWrite=false дає значно чистіший вигляд.
+     m.depthWrite=keep || pct===0;
+     m.depthTest=true;
+     m.alphaTest=0;
+     m.side=THREE.DoubleSide;
+
+     // Не змінюємо map/color — текстура і колір DAE залишаються оригінальними.
+     if(m.emissive){
+       if(m.userData.baseEm===undefined)m.userData.baseEm=m.emissive.getHex();
+       m.emissive.setHex(o===selected?0xff7800:m.userData.baseEm);
+     }
+     m.needsUpdate=true;
+   });
  });
 }
 function clearSelection(){selected=null;$('info').style.display='none';applyOpacity()}
