@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Montazh USDZ Viewer</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#f3f5f7;color:#1f2937}#app{width:100%;height:100%;position:relative}canvas{display:block}.bar{position:absolute;left:14px;top:14px;z-index:10;background:#ffffffee;padding:12px;border-radius:12px;box-shadow:0 4px 20px #0002;min-width:260px}.row{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}button,.filebtn{border:1px solid #cbd5e1;background:#fff;padding:8px 11px;border-radius:8px;cursor:pointer;font-size:14px}.filebtn{background:#2563eb;color:#fff;border-color:#2563eb}input[type=file]{display:none}input[type=range]{width:150px}.small{font-size:12px;color:#64748b;margin-top:7px;max-width:330px}.dims{position:absolute;right:14px;top:14px;z-index:10;background:#ffffffee;padding:12px 14px;border-radius:12px;box-shadow:0 4px 20px #0002;min-width:190px;display:none}.dims b{display:block;margin-bottom:6px}.badge{font-size:12px;background:#eef2ff;border-radius:999px;padding:4px 8px}.loading{position:absolute;inset:0;display:none;place-items:center;background:#ffffff99;z-index:20;font-size:18px;font-weight:600}
+</style>
+</head><body><div id="app">
+<div class="bar"><div><b>Montazh — USDZ</b></div><div class="row"><label class="filebtn">📂 Відкрити USDZ<input id="file" type="file" accept=".usdz" /></label><button id="fit">Показати все</button></div><div class="row"><span>Прозорість</span><input id="alpha" type="range" min="0" max="80" value="45"><span id="aval" class="badge">45%</span></div><div id="status" class="small">Вибери файл .usdz. Клік по деталі — вибір, повторний клік — скасування.</div></div>
+<div id="dims" class="dims"><b id="partname">Деталь</b><div id="dimtext"></div></div><div id="loading" class="loading">Завантаження моделі…</div>
+</div>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.180.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.180.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {USDZLoader} from 'three/addons/loaders/USDZLoader.js';
+const app=document.getElementById('app'), file=document.getElementById('file'), alpha=document.getElementById('alpha'), aval=document.getElementById('aval'), status=document.getElementById('status'), dims=document.getElementById('dims'), dimtext=document.getElementById('dimtext'), partname=document.getElementById('partname'), loading=document.getElementById('loading');
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0xf3f5f7);
+const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,.001,10000); camera.position.set(3,2.2,3.5);
+const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight); renderer.outputColorSpace=THREE.SRGBColorSpace; app.prepend(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement); controls.enableDamping=true; controls.dampingFactor=.07;
+scene.add(new THREE.HemisphereLight(0xffffff,0x88909a,2.1)); const dl=new THREE.DirectionalLight(0xffffff,2.2); dl.position.set(4,7,5); scene.add(dl); const dl2=new THREE.DirectionalLight(0xffffff,1); dl2.position.set(-4,2,-3); scene.add(dl2);
+let model=null, selected=null, originals=new Map(); const ray=new THREE.Raycaster(), mouse=new THREE.Vector2();
+function service(o){const n=(o.name||'').toLowerCase(); return /abf_|label|minifix|hinge|screw|bolt|hole|drill/.test(n)}
+function cloneMats(root){root.traverse(o=>{if(!o.isMesh)return; if(Array.isArray(o.material))o.material=o.material.map(m=>m.clone()); else if(o.material)o.material=o.material.clone(); const a=Array.isArray(o.material)?o.material:[o.material]; a.filter(Boolean).forEach(m=>{m.side=THREE.DoubleSide; m.depthWrite=true}); originals.set(o,a.map(m=>({color:m.color?.clone(),emissive:m.emissive?.clone(),opacity:m.opacity,transparent:m.transparent,depthWrite:m.depthWrite})))})}
+function meaningful(o){if(!o)return false; const n=(o.name||'').trim(); return n && !/^(mesh|group|object|scene|default)/i.test(n) && !service(o)}
+function partFor(mesh){let p=mesh,best=mesh; while(p&&p!==model){if(meaningful(p))best=p; p=p.parent} return best}
+function setTransparency(){const op=1-(+alpha.value/100); aval.textContent=alpha.value+'%'; if(!model)return; model.traverse(o=>{if(!o.isMesh)return; const mats=Array.isArray(o.material)?o.material:[o.material]; const keep=service(o)|| (selected && (o===selected || isDesc(o,selected))); mats.filter(Boolean).forEach(m=>{m.transparent=!keep && op<1; m.opacity=keep?1:op; m.depthWrite=keep?true:(op>.62); m.needsUpdate=true})})}
+function isDesc(o,p){let q=o;while(q){if(q===p)return true;q=q.parent}return false}
+function clearHighlight(){if(!model)return; model.traverse(o=>{if(!o.isMesh)return; const rec=originals.get(o), mats=Array.isArray(o.material)?o.material:[o.material]; if(rec)mats.forEach((m,i)=>{if(m.emissive&&rec[i]?.emissive)m.emissive.copy(rec[i].emissive)})})}
+function select(p){clearHighlight(); if(selected===p){selected=null;dims.style.display='none';setTransparency();return} selected=p; p.traverse?.(o=>{if(o.isMesh){const ms=Array.isArray(o.material)?o.material:[o.material];ms.filter(Boolean).forEach(m=>{if(m.emissive)m.emissive.setRGB(.55,.18,0)})}}); const b=new THREE.Box3().setFromObject(p), s=new THREE.Vector3();b.getSize(s); const unitScale=s.length()<20?1000:1; partname.textContent=p.name||'Деталь'; dimtext.innerHTML=`Ш: <b>${Math.round(s.x*unitScale)} мм</b><br>В: <b>${Math.round(s.y*unitScale)} мм</b><br>Г: <b>${Math.round(s.z*unitScale)} мм</b>`;dims.style.display='block';setTransparency()}
+function fit(){if(!model)return; const b=new THREE.Box3().setFromObject(model), c=new THREE.Vector3(), s=new THREE.Vector3();b.getCenter(c);b.getSize(s); const max=Math.max(s.x,s.y,s.z)||1, dist=max/(2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)))*1.45; camera.position.copy(c).add(new THREE.Vector3(dist*.8,dist*.55,dist)); camera.near=Math.max(dist/1000,.001);camera.far=dist*100;camera.updateProjectionMatrix();controls.target.copy(c);controls.update()}
+file.onchange=async()=>{const f=file.files[0];if(!f)return;loading.style.display='grid';status.textContent='Читаю '+f.name+'…';try{const buf=await f.arrayBuffer();const loader=new USDZLoader();const obj=loader.parse(buf);if(model){scene.remove(model);model=null}model=obj;scene.add(model);cloneMats(model);selected=null;dims.style.display='none';setTransparency();fit();let meshes=0, named=0, serviceCount=0;model.traverse(o=>{if(o.isMesh)meshes++;if(o.name)named++;if(service(o))serviceCount++});status.textContent=`${f.name} • mesh: ${meshes} • названих: ${named} • ABF/фурнітура: ${serviceCount}`;}catch(e){console.error(e);status.textContent='Помилка USDZ: '+(e.message||e)}finally{loading.style.display='none'}};
+alpha.oninput=setTransparency;document.getElementById('fit').onclick=fit;
+renderer.domElement.addEventListener('pointerdown',e=>{if(!model)return;const r=renderer.domElement.getBoundingClientRect();mouse.x=((e.clientX-r.left)/r.width)*2-1;mouse.y=-((e.clientY-r.top)/r.height)*2+1;ray.setFromCamera(mouse,camera);const hits=ray.intersectObject(model,true);if(hits.length)select(partFor(hits[0].object));});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera)});
+</script></body></html>
