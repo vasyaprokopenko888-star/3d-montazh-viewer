@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f4f3ef"><title>Assembly · Переглядач меблів</title>
+<style>
+:root{font:14px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;color:#303733;background:#eeefeb;--accent:#df742e;--line:#daddd6}*{box-sizing:border-box}body{margin:0;overflow:hidden}button,input,select{font:inherit}button{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:7px;padding:9px 13px;color:inherit;min-height:40px}button:hover{background:#f2f2ed}button:disabled{opacity:.4;cursor:default}button.primary{background:var(--accent);color:white;border-color:var(--accent);font-weight:650}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}header{height:72px;background:#fcfcfa;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 25px;gap:15px;position:relative;z-index:2}.brand{font-size:19px;font-weight:750;letter-spacing:2px}.brand small{display:block;font-size:10px;font-weight:500;letter-spacing:2.5px;color:#858d84}.header-actions{display:flex;gap:8px;align-items:center}.badge{font-size:11px;letter-spacing:1px;color:#737b73;margin-right:12px}#viewport{position:absolute;inset:72px 0 0}canvas{display:block;width:100%;height:100%;touch-action:none}.card{background:#fdfdfbf2;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 30px #29302908;padding:19px}.tools{position:absolute;top:94px;left:22px;width:256px;z-index:2}h2{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;margin:0 0 15px;color:#7b837b}.row{display:flex;justify-content:space-between;align-items:center;gap:8px}.value{color:#a85624;font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:var(--accent);margin:15px 0 5px}.muted{font-size:12px;color:#7f877e}.legend{display:flex;gap:8px;align-items:center;font-size:12px;margin:9px 0}.dot{width:10px;height:10px;border-radius:3px;background:#cbc7b9}.dot.dark{background:#596864}.dot.orange{background:#ec843e}hr{border:0;border-top:1px solid var(--line);margin:16px 0}.check{display:flex;gap:8px;align-items:center;font-size:12px;margin:10px 0}.check input{accent-color:var(--accent)}.stack{display:grid;gap:8px}.info{position:absolute;right:22px;top:94px;width:302px;z-index:2}.info strong{font-size:17px;font-weight:650;overflow-wrap:anywhere}#size{margin:7px 0 10px;font-variant-numeric:tabular-nums}#detail-note{margin-bottom:15px}select{width:100%;border:1px solid var(--line);background:#fff;padding:9px;border-radius:6px;color:#454c45;margin:8px 0;min-width:0}.empty{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);text-align:center;width:min(440px,85vw);z-index:1}.empty .icon{font-size:64px;color:#a2ad9c;line-height:1}.empty h1{font-size:28px;font-weight:600;line-height:1.2}.empty p{color:#7a8279}.empty button{margin:12px 4px}footer{position:absolute;bottom:0;left:0;right:0;min-height:40px;background:#fcfcfae8;border-top:1px solid var(--line);padding:10px 22px;display:flex;justify-content:space-between;gap:14px;font-size:11px;color:#717a70;z-index:2}#status{max-width:65%;overflow-wrap:anywhere}#busy{position:absolute;inset:72px 0 0;background:#f5f5efdd;z-index:5;display:grid;place-items:center;font-size:17px}#busy[hidden], [hidden]{display:none!important}.hint{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#fcfcfae6;border:1px solid var(--line);padding:8px 14px;border-radius:20px;font-size:11px;color:#798175;pointer-events:none}.mobile-toggle{display:none}details summary{cursor:pointer;font-size:12px;color:#707a6e}details p{font-size:11px;color:#788074;margin-bottom:0}#error{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);background:#fff2e9;color:#96451c;padding:14px 20px;max-width:90%;z-index:6;border:1px solid #e0b89c;border-radius:8px}
+@media(max-width:800px){header{height:64px;padding:0 12px}.brand{font-size:15px}.brand small{font-size:8px}.badge{display:none}#viewport,#busy{top:64px}.tools{top:78px;left:12px;width:226px;padding:14px;display:none}.tools.open{display:block}.mobile-toggle{display:block}.info{top:78px;right:12px;width:240px;padding:14px}.info strong{font-size:14px}.info h2{margin-bottom:8px}footer{padding:8px 12px}footer .desktop,.hint{display:none}.empty{top:58%}.info .muted{font-size:11px}}@media(max-width:520px){.info{top:auto;bottom:47px;right:10px;left:10px;width:auto;padding:12px}.info hr,.info h2,#detail-note{display:none}.info .stack{grid-template-columns:1fr 1fr}.info select{margin:5px 0}.info #size{margin:2px 0}.tools{z-index:3}.empty{top:36%}.empty h1{font-size:23px}.empty p{font-size:12px}.empty .icon{font-size:40px}.header-actions button{padding:7px 9px}.empty .muted{display:none}}
+.tools{max-height:calc(100dvh - 155px);overflow-y:auto;overscroll-behavior:contain}
+@media(max-width:520px){#viewport{bottom:265px}.header-actions button{white-space:nowrap}footer{min-height:47px}#status{max-width:100%}.empty{top:32%}.tools{max-height:calc(100dvh - 135px)}}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header><div class="brand">ASSEMBLY<span style="color:#df742e"> /</span><small>МЕБЛЕВИЙ ТЕХНІЧНИЙ ПЕРЕГЛЯДАЧ</small></div><div class="header-actions"><span class="badge">DAE · LOCAL VIEWER</span><button class="mobile-toggle" id="settings" aria-label="Налаштування">☷</button><button class="primary" id="open">Відкрити DAE</button></div></header>
+<input type="file" accept=".dae" id="file" hidden><main id="viewport" aria-label="3D-модель меблів"></main>
+<aside class="card tools" id="tools"><h2>Відображення</h2><div class="row"><label for="opacity">Прозорість панелей</label><span class="value" id="opacity-value">58%</span></div><input id="opacity" type="range" min="0" max="82" value="58"><div class="muted">Форма зберігається навіть при 82%</div><hr><div class="legend"><i class="dot"></i>Корпусні панелі</div><div class="legend"><i class="dot dark"></i>Фурнітура та ABF · непрозорі</div><div class="legend"><i class="dot orange"></i>Вибрана деталь</div><hr><label class="check"><input id="edges" type="checkbox" checked>Контури панелей</label><label class="check"><input id="smooth" type="checkbox" checked>Згладжування після обертання</label><label class="check"><input id="extra-lines" type="checkbox" checked>Інші лінії SketchUp</label><div class="stack"><button id="fit">Центрувати модель</button><button id="all">Показати все</button></div><hr><details><summary>Як це працює</summary><p>Один палець — обертання. Два — масштаб і переміщення. На ПК: ліва кнопка — обертання, права — pan, колесо — zoom. Клік або список — вибір. Esc — зняти вибір.</p><p>Прозорість alphaHash: під час руху можлива зернистість. Назви ABF та геометрія визначають типи об’єктів евристично. Розміри — габарити геометрії в локальних осях деталі, з урахуванням одиниць DAE. Текстури не завантажуються. Потрібен інтернет для бібліотеки Three.js.</p></details></aside>
+<aside class="card info"><h2>Вибрана деталь</h2><strong id="name">Панель: не вибрано</strong><div id="size">Розмір: —</div><div class="muted" id="detail-note">Натисніть на панель у моделі</div><label class="muted" for="parts">Панелі моделі</label><select id="parts" disabled><option value="">Виберіть деталь…</option></select><hr><div class="stack"><button id="hide" disabled>Приховати панель</button><button id="restore" disabled>Повернути приховані</button></div></aside>
+<section class="empty" id="empty"><div class="icon">◇</div><h1>Кожна деталь.<br>На своєму місці.</h1><p>Відкрийте модель SketchUp у форматі DAE<br>та перегляньте її конструкцію.</p><button id="demo">Переглянути приклад</button><p class="muted">Файл обробляється лише у вашому браузері.<br>Без текстур. Без завантаження на сервер.</p></section>
+<div class="hint">Обертання · ліва кнопка &nbsp; / &nbsp; Pan · права &nbsp; / &nbsp; Zoom · колесо</div><footer><span id="status" role="status">Завантаження 3D-модуля…</span><span class="desktop">ASSEMBLY VIEW / мм</span></footer><div id="busy" hidden role="status">Обробка моделі…</div><div id="error" role="alert" hidden></div>
+<script type="module">
+const $=id=>document.getElementById(id);
+function error(message){$('error').textContent=message;$('error').hidden=false;}
+try {
+const THREE=await import('three');
+const [{OrbitControls},{ColladaLoader},{EffectComposer},{Pass,FullScreenQuad},{OutputPass},{mergeGeometries,mergeVertices}]=await Promise.all([
+ import('three/addons/controls/OrbitControls.js'),import('three/addons/loaders/ColladaLoader.js'),import('three/addons/postprocessing/EffectComposer.js'),import('three/addons/postprocessing/Pass.js'),import('three/addons/postprocessing/OutputPass.js'),import('three/addons/utils/BufferGeometryUtils.js')]);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.outputColorSpace=THREE.SRGBColorSpace;
+$('viewport').appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color('#eeefeb');
+const camera=new THREE.PerspectiveCamera(38,1,.001,1000);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.12;
+scene.add(new THREE.HemisphereLight(0xffffff,0xa0a292,2.2));const sun=new THREE.DirectionalLight(0xffffff,2.4);sun.position.set(4,7,6);scene.add(sun);
+// Independent temporal transparency samples, averaged in LINEAR color space.
+// Unlike a fixed spatial hash, the grain actually changes between samples and cancels out.
+const transparencyFrame={value:0};
+const halton=(i,base)=>{let f=1,v=0;while(i>0){f/=base;v+=f*(i%base);i=Math.floor(i/base);}return v;};
+class CleanTransparencyPass extends Pass {
+ constructor(){super();this.accumulate=false;this.samples=0;this.width=1;this.height=1;
+  const options={type:THREE.HalfFloatType,depthBuffer:false};
+  this.sample=new THREE.WebGLRenderTarget(1,1,{...options,depthBuffer:true});this.history=new THREE.WebGLRenderTarget(1,1,options);this.next=new THREE.WebGLRenderTarget(1,1,options);
+  this.mix=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{current:{value:null},history:{value:null},weight:{value:1}},vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',fragmentShader:'uniform sampler2D current;uniform sampler2D history;uniform float weight;varying vec2 vUv;void main(){vec4 c=texture2D(current,vUv);if(weight>=1.0){gl_FragColor=c;}else{gl_FragColor=mix(texture2D(history,vUv),c,weight);}}'});this.quad=new FullScreenQuad(this.mix);
+ }
+ reset(){this.samples=0;}
+ setSize(w,h){this.width=w;this.height=h;for(const rt of [this.sample,this.history,this.next])rt.setSize(w,h);this.reset();}
+ render(renderer,writeBuffer){if(!this.accumulate){this.reset();transparencyFrame.value=0;renderer.setRenderTarget(writeBuffer);renderer.clear();renderer.render(scene,camera);return;}
+  const n=this.samples;transparencyFrame.value=n+1;camera.setViewOffset(this.width,this.height,halton(n+1,2)-.5,halton(n+1,3)-.5,this.width,this.height);
+  renderer.setRenderTarget(this.sample);renderer.clear();renderer.render(scene,camera);camera.clearViewOffset();
+  this.mix.uniforms.current.value=this.sample.texture;this.mix.uniforms.history.value=this.history.texture;this.mix.uniforms.weight.value=1/(n+1);renderer.setRenderTarget(this.next);this.quad.render(renderer);
+  [this.history,this.next]=[this.next,this.history];this.mix.uniforms.current.value=this.history.texture;this.mix.uniforms.history.value=this.sample.texture;this.mix.uniforms.weight.value=1;renderer.setRenderTarget(writeBuffer);this.quad.render(renderer);this.samples++;
+ }
+ dispose(){for(const rt of [this.sample,this.history,this.next])rt.dispose();this.mix.dispose();this.quad.dispose();}
+}
+const composer=new EffectComposer(renderer);const taa=new CleanTransparencyPass();composer.addPass(taa);composer.addPass(new OutputPass());
+// Shared materials: opaque service geometry NEVER receives the panel opacity.
+const panelMat=new THREE.MeshStandardMaterial({color:0xcac4b4,roughness:.9,metalness:0,alphaHash:true,transparent:false,opacity:.42,side:THREE.DoubleSide,depthWrite:true,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+panelMat.onBeforeCompile=shader=>{shader.uniforms.transparencyFrame=transparencyFrame;shader.fragmentShader='uniform float transparencyFrame;\n'+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace('#include <alphahash_fragment>',`
+ #ifdef USE_ALPHAHASH
+  // Integer hash avoids precision-related stripes from sin-based noise.
+  uvec3 noiseKey=uvec3(uvec2(gl_FragCoord.xy),uint(gl_FragCoord.z*16777216.0));
+  uint noiseBits=noiseKey.x*1597334677u ^ noiseKey.y*3812015801u ^ noiseKey.z*2798796415u ^ uint(transparencyFrame)*1979697957u;
+  noiseBits^=noiseBits>>16;noiseBits*=2146121005u;noiseBits^=noiseBits>>15;noiseBits*=2221713035u;noiseBits^=noiseBits>>16;
+  if(diffuseColor.a<float(noiseBits & 16777215u)/16777216.0)discard;
+ #endif
+ `);};panelMat.customProgramCacheKey=()=> 'assembly-temporal-hash-v1';
+const qualityLabel=document.createElement('label');qualityLabel.className='muted';qualityLabel.htmlFor='quality';qualityLabel.textContent='Якість згладжування';
+const quality=document.createElement('select');quality.id='quality';quality.setAttribute('aria-label','Якість згладжування');quality.add(new Option('Швидка','64'));quality.add(new Option('Висока','128',true,true));quality.add(new Option('Максимальна','256'));const smoothLabel=$('smooth').closest('label');smoothLabel.after(qualityLabel,quality);
+const smoothProgress=document.createElement('div');smoothProgress.className='muted';smoothProgress.id='smooth-progress';quality.after(smoothProgress);
+const selectedMat=new THREE.MeshStandardMaterial({color:0xed873d,roughness:.8,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+const hardwareMat=new THREE.MeshStandardMaterial({color:0x536761,roughness:.62,metalness:.15,side:THREE.DoubleSide});
+const labelMat=new THREE.MeshBasicMaterial({color:0x253c36,side:THREE.DoubleSide});
+const unknownMat=new THREE.MeshStandardMaterial({color:0x969c90,roughness:.85,side:THREE.DoubleSide});
+const edgeMat=new THREE.LineBasicMaterial({color:0x696d61,depthWrite:false});const serviceLineMat=new THREE.LineBasicMaterial({color:0x344d44});const otherLineMat=new THREE.LineBasicMaterial({color:0x858b7e});
+const shared=new Set([panelMat,selectedMat,hardwareMat,labelMat,unknownMat,edgeMat,serviceLineMat,otherLineMat]);
+let root=null,parts=[],selected=null,others=[],fileName='',counts={},loading=false,lastChange=0,dirty=true,settledFrames=0;
+let viewDirection=new THREE.Vector3(1,.7,1.35).normalize();
+const serviceRE=/(?:_?ABF[\s_.-]*(?:label|hole|drill|text|mark)|minifix|hinge|screw|side[\s_-]*drill|drilling|dowel|confirmat|cam[\s_-]*(?:lock|bolt)|bolt|washer|fastener|hardware|mounting[\s_-]*plate|plastic[\s_-]*base|фурнітур|фурнитур|кріплен|крепеж|петл|шуруп|конфірмат|конфирмат|отвір|отвор|отверст|свердл|сверлен|шкант|напрямн|направляющ|runner|drawer[\s_-]*slide)/i;
+const labelRE=/(?:ABF[\s_.-]*label|label|annotation|маркуван|маркиров|позначен|^мітк[аи]$)/i;
+// Whole product ancestors take precedence over words such as "фасад" in their names.
+const productRE=/(?:^_*ABF(?:_|Blocked)|\bBlum\b|TANDEMBOX|BLUMOTION|TIP[-_]ON|SERVO[-_]DRIVE|cabineo|CAMAR|Cargo_STAR|GOLA|Ferro_Fiori|S[сc]ilm|самор[іе]з|креплен|підвіс|навіс|ніжка|Zaślepka|^Лоток|Піддон|Провід|підсвіт|блок_живлення|^Вилка)/i;
+const numberedRE=/^_*\s*\d+(?:[.\s_-]|$)/;
+const partRE=/(?:деталь|панель|panel|shelf|shelve|side[\s_-]*panel|полиц|полк|фасад|боков|дно|кришк|крышк)/i;
+const tick=()=>new Promise(r=>setTimeout(r,0));
+function invalidate(){lastChange=performance.now();dirty=true;settledFrames=0;taa.accumulate=false;taa.reset();}
+controls.addEventListener('change',invalidate);
+function resize(){const el=$('viewport');const ratio=Math.min(Math.max(devicePixelRatio,1.5),2,Math.sqrt(3000000/Math.max(1,el.clientWidth*el.clientHeight)));renderer.setPixelRatio(ratio);renderer.setSize(el.clientWidth,el.clientHeight);composer.setPixelRatio(ratio);composer.setSize(el.clientWidth,el.clientHeight);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix();invalidate();}
+quality.onchange=invalidate;
+new ResizeObserver(resize).observe($('viewport'));
+function frame(now){requestAnimationFrame(frame);controls.update();if(!dirty)return;
+ const idle=now-lastChange>180;
+ if($('smooth').checked&&idle){taa.accumulate=true;composer.render();const target=Number(quality.value);smoothProgress.textContent=taa.samples>=target?'Згладжено':'Згладжування: '+Math.round(taa.samples/target*100)+'%';if(taa.samples>=target)dirty=false;}else{taa.accumulate=false;composer.render();smoothProgress.textContent=$('smooth').checked?'Зупиніть модель для згладжування':'Згладжування вимкнено';if(!$('smooth').checked)dirty=false;}
+}requestAnimationFrame(frame);
+function displayName(o){return (o.userData.sourceName||o.name||'Без назви').replace(/^_+/,'').replace(/_+/g,' ').replace(/\.(?=\S)/g,'. ').trim();}
+function localBounds(owner,meshes){owner.updateWorldMatrix(true,false);const inv=owner.matrixWorld.clone().invert();const box=new THREE.Box3();const p=new THREE.Vector3();
+ for(const m of meshes){const a=m.geometry?.attributes.position;if(!a)continue;const matrix=inv.clone().multiply(m.matrixWorld);for(let i=0;i<a.count;i++){p.fromBufferAttribute(a,i).applyMatrix4(matrix);box.expandByPoint(p);}}return box;}
+function dimensions(owner,box){const s=box.getSize(new THREE.Vector3()),e=owner.matrixWorld.elements;return [s.x*Math.hypot(e[0],e[1],e[2]),s.y*Math.hypot(e[4],e[5],e[6]),s.z*Math.hypot(e[8],e[9],e[10])].map(v=>v*1000).sort((a,b)=>b-a);}
+function disposeTree(object){const geos=new Set(),mats=new Set();object.traverse(o=>{if(o.geometry)geos.add(o.geometry);for(const m of [].concat(o.material||[]))if(!shared.has(m))mats.add(m);});geos.forEach(g=>g.dispose());mats.forEach(m=>m.dispose());}
+function refresh(){let hidden=parts.filter(p=>p.hidden).length;$('hide').disabled=!selected;$('restore').disabled=!hidden;
+ $('name').textContent=selected?'Панель: '+selected.name:'Панель: не вибрано';$('size').textContent=selected?'Розмір: '+selected.size.map(v=>Math.round(v)).join(' × ')+' мм':'Розмір: —';
+ $('detail-note').textContent=selected?(selected.inferred?'Визначено за формою · локальні габарити':'Локальні габарити деталі без фурнітури'):'Натисніть на панель у моделі';
+ $('parts').value=selected?String(selected.id):'';
+ for(const option of $('parts').options){const p=parts[Number(option.value)];if(option.value!==''&&p){option.disabled=p.hidden;option.textContent=p.name+(p.hidden?' · приховано':'');}}
+ $('status').textContent=root?`${fileName} · Панелі: ${parts.length} · ABF labels: ${counts.labels} · Mesh: ${counts.mesh} · Лінії: ${counts.lines} · Приховано: ${hidden}`:'Готово · відкрийте DAE';}
+function choose(part){if(selected)selected.meshes.forEach(m=>m.material=panelMat);selected=part;if(selected)selected.meshes.forEach(m=>m.material=selectedMat);refresh();invalidate();}
+function fit(){if(!root)return;root.updateMatrixWorld(true);const box=new THREE.Box3();for(const p of parts)if(!p.hidden)box.union(p.box.clone().applyMatrix4(p.owner.matrixWorld));if(box.isEmpty())root.traverseVisible(o=>{if(o.geometry){o.geometry.computeBoundingBox();box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));}});if(box.isEmpty())return;
+ const center=box.getCenter(new THREE.Vector3()),radius=Math.max(box.getSize(new THREE.Vector3()).length()/2,.01),angle=Math.min(THREE.MathUtils.degToRad(camera.fov/2),Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*camera.aspect));
+ const distance=radius/Math.sin(angle)*1.12;controls.target.copy(center);camera.position.copy(center).add(viewDirection.clone().multiplyScalar(distance));camera.near=Math.max(radius/2000,.00001);camera.far=distance+radius*25;camera.updateProjectionMatrix();controls.minDistance=radius*.03;controls.maxDistance=radius*20;controls.update();invalidate();}
+// Clean XML BEFORE ColladaLoader parses it, so it never creates texture requests.
+function sanitize(text){const xml=new DOMParser().parseFromString(text,'application/xml');if(xml.querySelector('parsererror')||xml.documentElement.localName!=='COLLADA')throw Error('Файл не є коректним COLLADA DAE.');
+ if(xml.getElementsByTagNameNS('*','controller').length)throw Error('Цей viewer призначений для статичних DAE. Експортуйте модель без анімації та skin/controller.');
+ const unit=xml.getElementsByTagNameNS('*','unit')[0];if(unit&&(!Number.isFinite(Number(unit.getAttribute('meter')))||Number(unit.getAttribute('meter'))<=0))throw Error('Некоректний масштаб одиниць у DAE.');
+ for(const el of [...xml.getElementsByTagNameNS('*','texture')]){const color=xml.createElementNS(xml.documentElement.namespaceURI,'color');color.textContent='.7 .7 .7 1';el.replaceWith(color);}
+ for(const tag of ['library_images','extra'])for(const el of [...xml.getElementsByTagNameNS('*',tag)])el.remove();
+ // Retain original names in a lookup, give nodes unique names to avoid exporter sanitization.
+ const names=new Map();let index=0;for(const el of xml.getElementsByTagNameNS('*','node')){const key='__viewer_node_'+index++;names.set(key,el.getAttribute('name')||el.getAttribute('id')||'');el.setAttribute('name',key);}
+ for(const tag of ['instance_node','instance_geometry','instance_material'])for(const el of xml.getElementsByTagNameNS('*',tag)){const attr=tag==='instance_material'?'target':'url',v=el.getAttribute(attr);if(v&&!v.startsWith('#'))throw Error('DAE містить зовнішні посилання. Експортуйте самодостатній файл.');}
+ return {text:new XMLSerializer().serializeToString(xml),names,unitMissing:!unit};}
+// SketchUp can export the two sides of a face as reversed duplicate triangles.
+// Compare absolute normal dot products: coplanar back/front triangles are NOT creases.
+function technicalEdges(g){const pos=g.attributes.position,idx=g.index,edges=new Map(),faces=new Set(),a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),ab=new THREE.Vector3(),ac=new THREE.Vector3();
+ const count=idx?idx.count:pos.count;for(let i=0;i<count;i+=3){const ids=[0,1,2].map(j=>idx?idx.getX(i+j):i+j),key=ids.slice().sort((x,y)=>x-y).join(',');if(faces.has(key))continue;faces.add(key);a.fromBufferAttribute(pos,ids[0]);b.fromBufferAttribute(pos,ids[1]);c.fromBufferAttribute(pos,ids[2]);const normal=ab.subVectors(b,a).cross(ac.subVectors(c,a)).normalize().clone();if(normal.lengthSq()<.5)continue;
+ for(let j=0;j<3;j++){const u=ids[j],v=ids[(j+1)%3],key=u<v?u+','+v:v+','+u;const e=edges.get(key);if(e){e.count++;if(Math.abs(e.normal.dot(normal))<.819152)e.crease=true;}else edges.set(key,{u,v,normal,count:1,crease:false});}}
+ const out=[];for(const e of edges.values())if(e.count===1||e.crease){a.fromBufferAttribute(pos,e.u);b.fromBufferAttribute(pos,e.v);out.push(a.x,a.y,a.z,b.x,b.y,b.z);}return new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(out,3));}
+function batchLines(model,lines,ownerMap){const buckets=new Map(),inv=model.matrixWorld.clone().invert();
+ for(const l of lines){if(!l.visible)continue;let owner=null;for(let a=l;a;a=a.parent)if(ownerMap.has(a)){owner=ownerMap.get(a);break;}const key=(owner?.id??'global')+':'+(l.userData.service?'service':'other');if(!buckets.has(key))buckets.set(key,{owner,material:l.material,other:!!l.userData.otherLine,positions:[]});const bucket=buckets.get(key),pos=l.geometry.attributes.position,index=l.geometry.index;if(!pos)continue;const matrix=inv.clone().multiply(l.matrixWorld),v=new THREE.Vector3(),length=index?index.count:pos.count;
+ const push=i=>{v.fromBufferAttribute(pos,index?index.getX(i):i).applyMatrix4(matrix);bucket.positions.push(v.x,v.y,v.z);};if(l.isLineSegments){for(let i=0;i+1<length;i+=2){push(i);push(i+1);}}else {for(let i=0;i+1<length;i++){push(i);push(i+1);}if(l.isLineLoop&&length>1){push(length-1);push(0);}}
+ l.visible=false;l.userData.otherLine=false;if(owner)owner.attached=owner.attached.filter(o=>o!==l);}
+ for(const b of buckets.values()){const line=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(b.positions,3)),b.material);line.userData.otherLine=b.other;model.add(line);if(b.owner)b.owner.attached.push(line);}}
+async function prepare(model,names){model.updateMatrixWorld(true);const meshes=[],lines=[],oldMats=new Set();counts={mesh:0,lines:0,service:0,labels:0,unknown:[]};
+ function visit(o,service=false,label=false){const source=names?.get(o.name);if(source!==undefined)o.userData.sourceName=source;const name=o.userData.sourceName||o.name||'';if(/ABF[\s_.-]*Label/i.test(name))counts.labels++;service=service||serviceRE.test(name)||labelRE.test(name)||productRE.test(name);label=label||labelRE.test(name);o.userData.service=service;o.userData.label=label;
+ if(o.isMesh||o.isLine){for(const mat of [].concat(o.material||[]))if(!shared.has(mat))oldMats.add(mat);if(service)counts.service++;if(o.isMesh){counts.mesh++;meshes.push(o);}else{counts.lines++;lines.push(o);}}for(const child of o.children)visit(child,service,label);}
+ visit(model);const groups=new Map(),candidates=new Map();
+ for(const m of meshes){if(m.userData.service){m.material=m.userData.label?labelMat:hardwareMat;continue;}
+ let owner=null;for(let a=m;a&&a!==model;a=a.parent){const name=a.userData.sourceName||a.name||'';if(numberedRE.test(name)||partRE.test(name)){owner=a;break;}}
+ // Unnumbered geometry is grouped at its immediate named component, never at SketchUp root.
+ if(!owner){let candidate=m;while(candidate.parent&&candidate.parent!==model&&!(candidate.userData.sourceName||candidate.name))candidate=candidate.parent;if(!candidates.has(candidate))candidates.set(candidate,[]);candidates.get(candidate).push(m);continue;}
+ if(!groups.has(owner))groups.set(owner,{owner,meshes:[],inferred:false});groups.get(owner).meshes.push(m);}
+ for(const [owner,items] of candidates){const d=dimensions(owner,localBounds(owner,items));if(d[0]>60&&d[1]>40&&d[2]>=1&&d[2]<=65&&d[2]/d[1]<.3)groups.set(owner,{owner,meshes:items,inferred:true});else for(const m of items){m.material=unknownMat;counts.unknown.push(displayName(owner));}}
+ const result=[];let n=0;for(const group of groups.values()){const box=localBounds(group.owner,group.meshes),size=dimensions(group.owner,box);const p={...group,id:result.length,name:displayName(group.owner),box,size,hidden:false,attached:[],edge:null};result.push(p);p.meshes.forEach(m=>{m.material=panelMat;m.userData.part=p;});if(++n%30===0){$('busy').textContent=`Визначення деталей: ${n}…`;await tick();}}
+ const ownerMap=new Map(result.map(p=>[p.owner,p]));
+ // Lines already belonging to panels are replaced, NOT stacked with generated edges.
+ for(const l of lines){let p=null;for(let a=l;a;a=a.parent){if(ownerMap.has(a)){p=ownerMap.get(a);break;}}
+ if(l.userData.service){l.material=serviceLineMat;if(p)p.attached.push(l);}else if(p){l.visible=false;}else{l.material=otherLineMat;l.userData.otherLine=true;}}
+ for(const m of meshes.filter(m=>m.userData.service)){for(let a=m.parent;a;a=a.parent){if(ownerMap.has(a)){ownerMap.get(a).attached.push(m);break;}}}
+ // Merge a panel's triangle soup first. EdgesGeometry welds positions and suppresses coplanar seams.
+ for(const p of result){const inv=p.owner.matrixWorld.clone().invert(),chunks=[];let vertices=0;
+ for(const m of p.meshes){let g=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();for(const key of Object.keys(g.attributes))if(key!=='position')g.deleteAttribute(key);g.clearGroups();g.applyMatrix4(inv.clone().multiply(m.matrixWorld));vertices+=g.attributes.position.count;chunks.push(g);}
+ if(vertices<600000){const merged=mergeGeometries(chunks,false);if(merged){const welded=mergeVertices(merged,1e-5);const eg=technicalEdges(welded);const edge=new THREE.LineSegments(eg,edgeMat);edge.visible=$('edges').checked;p.owner.add(edge);p.edge=edge;merged.dispose();welded.dispose();}}
+ else {const edge=new THREE.Box3Helper(p.box,0x696d61);edge.material.depthWrite=false;p.owner.add(edge);p.edge=edge;edge.visible=$('edges').checked;}
+ chunks.forEach(g=>g.dispose());if(p.id%15===0){$('busy').textContent=`Контури панелей: ${p.id+1} / ${result.length}…`;await tick();}}
+ batchLines(model,lines,ownerMap);oldMats.forEach(m=>m.dispose());result.sort((a,b)=>a.name.localeCompare(b.name,'uk',{numeric:true}));result.forEach((p,i)=>p.id=i);return result;}
+async function install(model,name,names){let next;try{next=await prepare(model,names);}catch(e){disposeTree(model);throw e;}if(!counts.mesh){disposeTree(model);throw Error('DAE не містить поверхонь для відображення.');}
+ if(root){scene.remove(root);disposeTree(root);}root=model;parts=next;selected=null;fileName=name;others=[];viewDirection.set(1,.7,1.35).normalize();let savedCamera=null;root.traverse(o=>{if(o.isCamera)savedCamera=o;if(o.userData.otherLine){others.push(o);o.visible=$('extra-lines').checked;}});if(savedCamera){savedCamera.getWorldDirection(viewDirection).negate().normalize();}scene.add(root);
+ // Center only the top-level scene; per-part transforms and dimensions remain intact.
+ const center=new THREE.Box3().setFromObject(root).getCenter(new THREE.Vector3());root.position.sub(center);root.updateMatrixWorld(true);
+ $('parts').replaceChildren(new Option('Виберіть деталь…',''),...parts.map(p=>new Option(p.name,String(p.id))));$('parts').disabled=!parts.length;$('empty').hidden=true;let diag=$('diagnostics');if(!diag){diag=document.createElement('p');diag.id='diagnostics';$('tools').querySelector('details').appendChild(diag);}diag.textContent=counts.unknown.length?'Невизначені поверхні залишено непрозорими ('+counts.unknown.length+'): '+[...new Set(counts.unknown)].join(', '):'Усі поверхні класифіковано.';refresh();fit();}
+async function load(file){if(!file||loading)return;if(!/\.dae$/i.test(file.name)){error('Виберіть файл .dae');return;}loading=true;$('open').disabled=true;$('busy').hidden=false;$('busy').textContent='Читання DAE…';$('error').hidden=true;await tick();try{
+ const clean=sanitize(await file.text());await tick();const manager=new THREE.LoadingManager();manager.setURLModifier(()=>{throw Error('Зовнішній ресурс заблоковано: viewer не завантажує текстури.');});
+ const parsed=new ColladaLoader(manager).parse(clean.text,'');await install(parsed.scene,file.name,clean.names);if(clean.unitMissing)error('У DAE немає одиниць. За стандартом прийнято метри; перевірте розміри.');
+ }catch(e){console.error(e);error('Не вдалося відкрити модель: '+e.message);}finally{loading=false;$('busy').hidden=true;$('open').disabled=false;$('file').value='';}}
+$('open').onclick=()=>$('file').click();$('file').onchange=e=>load(e.target.files[0]);
+$('opacity').oninput=()=>{panelMat.opacity=1-Number($('opacity').value)/100;$('opacity-value').textContent=$('opacity').value+'%';invalidate();};
+$('edges').onchange=()=>{parts.forEach(p=>{if(p.edge)p.edge.visible=!p.hidden&&$('edges').checked;});invalidate();};$('smooth').onchange=invalidate;$('extra-lines').onchange=()=>{others.forEach(o=>o.visible=$('extra-lines').checked);invalidate();};
+$('parts').onchange=()=>choose($('parts').value===''?null:parts[Number($('parts').value)]);
+function setHidden(p,value){p.hidden=value;[...p.meshes,...p.attached].forEach(o=>o.visible=!value);if(p.edge)p.edge.visible=!value&&$('edges').checked;}
+$('hide').onclick=()=>{if(!selected)return;const p=selected;choose(null);setHidden(p,true);refresh();invalidate();};
+$('restore').onclick=()=>{parts.forEach(p=>setHidden(p,false));refresh();invalidate();};$('all').onclick=()=>{choose(null);parts.forEach(p=>setHidden(p,false));refresh();fit();};$('fit').onclick=fit;$('settings').onclick=()=>$('tools').classList.toggle('open');
+const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null;const pointers=new Set();
+renderer.domElement.addEventListener('pointerdown',e=>{pointers.add(e.pointerId);if(e.button===0&&pointers.size===1)down={x:e.clientX,y:e.clientY,id:e.pointerId};else down=null;});
+renderer.domElement.addEventListener('pointermove',e=>{if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>5)down=null;});
+renderer.domElement.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);down=null;});
+renderer.domElement.addEventListener('pointerup',e=>{pointers.delete(e.pointerId);if(!down||down.id!==e.pointerId)return;down=null;const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(pointer,camera);const targets=parts.filter(p=>!p.hidden).flatMap(p=>p.meshes);const hits=ray.intersectObjects(targets,false);const p=hits[0]?.object.userData.part;choose(p&&p!==selected?p:null);});
+window.addEventListener('keydown',e=>{if(e.key==='Escape')choose(null);});
+renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();error('Графічний контекст втрачено. Оновіть сторінку та відкрийте DAE знову.');});
+// Built-in demonstration; uses the same classification, selection, materials and edge pipeline.
+$('demo').onclick=async()=>{if(loading)return;loading=true;$('busy').hidden=false;try{const model=new THREE.Group();
+ const panel=(name,x,y,z,w,h,d)=>{const g=new THREE.Group();g.name=name;g.position.set(x,y,z);const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),unknownMat);g.add(m);model.add(g);return g;};
+ panel('__36. Деталь',-.309,.55,0,.018,1.059,.596);panel('__41. Деталь',.309,.55,0,.018,1.059,.596);panel('__42. Дно',0,.03,0,.6,.018,.596);panel('__43. Кришка',0,1.07,0,.6,.018,.596);panel('__44. Полиця',0,.56,0,.6,.018,.56);panel('__45. Задня панель',0,.55,-.295,.6,1.02,.006);
+ for(const x of [-.295,.295])for(const y of [.2,.85]){const g=new THREE.Group();g.name='hingeCup';g.position.set(x,y,.23);g.add(new THREE.Mesh(new THREE.CylinderGeometry(.019,.019,.012,20).rotateZ(Math.PI/2),hardwareMat));model.add(g);}
+ await install(model,'Демонстраційна шафа');}catch(e){error(e.message);}finally{loading=false;$('busy').hidden=true;}};
+refresh();resize();
+}catch(e){console.error(e);$('status').textContent='3D-модуль недоступний';error('Не вдалося запустити 3D. Перевірте інтернет і підтримку WebGL 2 у браузері. '+e.message);}
+</script></body></html>
