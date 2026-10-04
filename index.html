@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer"><meta name="theme-color" content="#f4f3ef"><title>Assembly · Переглядач меблів</title>
+<style>
+:root{font:14px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;color:#303733;background:#eeefeb;--accent:#df742e;--line:#daddd6}*{box-sizing:border-box}body{margin:0;overflow:hidden}button,input,select{font:inherit}button{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:7px;padding:9px 13px;color:inherit;min-height:40px}button:hover{background:#f2f2ed}button:disabled{opacity:.4;cursor:default}button.primary{background:var(--accent);color:white;border-color:var(--accent);font-weight:650}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}header{height:72px;background:#fcfcfa;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 25px;gap:15px;position:relative;z-index:2}.brand{font-size:19px;font-weight:750;letter-spacing:2px}.brand small{display:block;font-size:10px;font-weight:500;letter-spacing:2.5px;color:#858d84}.header-actions{display:flex;gap:8px;align-items:center}.badge{font-size:11px;letter-spacing:1px;color:#737b73;margin-right:12px}#viewport{position:absolute;inset:72px 0 0}canvas{display:block;width:100%;height:100%;touch-action:none}.card{background:#fdfdfbf2;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 30px #29302908;padding:19px}.tools{position:absolute;top:94px;left:22px;width:256px;z-index:2}h2{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;margin:0 0 15px;color:#7b837b}.row{display:flex;justify-content:space-between;align-items:center;gap:8px}.value{color:#a85624;font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:var(--accent);margin:15px 0 5px}.muted{font-size:12px;color:#7f877e}.legend{display:flex;gap:8px;align-items:center;font-size:12px;margin:9px 0}.dot{width:10px;height:10px;border-radius:3px;background:#cbc7b9}.dot.dark{background:#596864}.dot.orange{background:#ec843e}hr{border:0;border-top:1px solid var(--line);margin:16px 0}.check{display:flex;gap:8px;align-items:center;font-size:12px;margin:10px 0}.check input{accent-color:var(--accent)}.stack{display:grid;gap:8px}.info{position:absolute;right:22px;top:94px;width:302px;z-index:2}.info strong{font-size:17px;font-weight:650;overflow-wrap:anywhere}#size{margin:7px 0 10px;font-variant-numeric:tabular-nums}#detail-note{margin-bottom:15px}select{width:100%;border:1px solid var(--line);background:#fff;padding:9px;border-radius:6px;color:#454c45;margin:8px 0;min-width:0}.empty{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);text-align:center;width:min(440px,85vw);z-index:1}.empty .icon{font-size:64px;color:#a2ad9c;line-height:1}.empty h1{font-size:28px;font-weight:600;line-height:1.2}.empty p{color:#7a8279}.empty button{margin:12px 4px}footer{position:absolute;bottom:0;left:0;right:0;min-height:40px;background:#fcfcfae8;border-top:1px solid var(--line);padding:10px 22px;display:flex;justify-content:space-between;gap:14px;font-size:11px;color:#717a70;z-index:2}#status{max-width:65%;overflow-wrap:anywhere}#busy{position:absolute;inset:72px 0 0;background:#f5f5efdd;z-index:5;display:grid;place-items:center;font-size:17px}#busy[hidden], [hidden]{display:none!important}.hint{position:absolute;bottom:62px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#fcfcfae6;border:1px solid var(--line);padding:8px 14px;border-radius:20px;font-size:11px;color:#798175;pointer-events:none}.mobile-toggle{display:none}details summary{cursor:pointer;font-size:12px;color:#707a6e}details p{font-size:11px;color:#788074;margin-bottom:0}#error{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);background:#fff2e9;color:#96451c;padding:14px 20px;max-width:90%;z-index:6;border:1px solid #e0b89c;border-radius:8px}
+@media(max-width:800px){header{height:64px;padding:0 12px}.brand{font-size:15px}.brand small{font-size:8px}.badge{display:none}#viewport,#busy{top:64px}.tools{top:78px;left:12px;width:226px;padding:14px;display:none}.tools.open{display:block}.mobile-toggle{display:block}.info{top:78px;right:12px;width:240px;padding:14px}.info strong{font-size:14px}.info h2{margin-bottom:8px}footer{padding:8px 12px}footer .desktop,.hint{display:none}.empty{top:58%}.info .muted{font-size:11px}}@media(max-width:520px){.info{top:auto;bottom:47px;right:10px;left:10px;width:auto;padding:12px}.info hr,.info h2,#detail-note{display:none}.info .stack{grid-template-columns:1fr 1fr}.info select{margin:5px 0}.info #size{margin:2px 0}.tools{z-index:3}.empty{top:36%}.empty h1{font-size:23px}.empty p{font-size:12px}.empty .icon{font-size:40px}.header-actions button{padding:7px 9px}.empty .muted{display:none}}
+.tools{max-height:calc(100dvh - 155px);overflow-y:auto;overscroll-behavior:contain}
+#texture-report{margin:10px 0 16px;overflow-wrap:anywhere;font-size:11px}.tools>button{display:block;width:100%;margin:7px 0}#material{overflow-wrap:anywhere;margin:8px 0 12px}.info{max-height:calc(100dvh - 150px);overflow-y:auto}#material details>div{padding:4px 0;border-bottom:1px solid #eee}
+@media(max-width:520px){#viewport{bottom:265px}.header-actions button{white-space:nowrap}footer{min-height:47px}#status{max-width:100%}.empty{top:32%}.tools{max-height:calc(100dvh - 135px)}}
+@media(max-width:520px){#viewport{bottom:335px}.info{max-height:275px}#material{font-size:11px;margin:4px 0 7px}.empty{top:30%}.header-actions button{font-size:12px;padding:7px}.brand{letter-spacing:1px}}
+
+#panel-actions-toggle{display:none}
+@media(max-width:800px) and (pointer:coarse), (max-width:520px){
+.info{top:auto;bottom:calc(var(--phone-footer,40px) + 8px);left:10px;right:10px;width:auto;padding:10px 12px;max-height:45dvh;overflow:auto}
+.info h2,.info #detail-note{display:none}
+.info strong{font-size:14px}.info #size{font-size:13px;margin:2px 0}
+.info #material{font-size:11px;line-height:1.35;margin:4px 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.info.mobile-expanded #material{display:block;overflow:visible}
+#panel-actions-toggle{display:block;min-height:36px;padding:5px 10px;margin-top:6px;width:100%;font-size:12px}
+.info:not(.mobile-expanded) #panel-actions{display:none}
+.info .stack{grid-template-columns:1fr 1fr}.info select{margin:5px 0}
+#viewport{bottom:var(--phone-bottom,185px)}
+footer{min-height:30px;padding:6px 10px}#status{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}footer .desktop,.hint{display:none}
+}
+
+.view-menu{position:absolute;top:82px;left:50%;transform:translateX(-50%);z-index:4}
+.view-menu>summary{list-style:none;cursor:pointer;background:#fdfdfbf2;border:1px solid var(--line);border-radius:18px;padding:8px 13px;font-size:12px;min-height:36px;text-align:center;box-shadow:0 2px 8px #0000000a}
+.view-menu>summary::-webkit-details-marker{display:none}
+.view-menu[open]>summary{background:#fff0e4}
+.view-options{position:absolute;top:43px;left:50%;transform:translateX(-50%);width:210px;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 5px 20px #0002}
+.view-options button{font-size:12px;min-height:40px;padding:6px}.view-options button:last-child{grid-column:1/-1}
+@media(max-width:800px){.view-menu{top:72px}}
+
+/* Translucent backgrounds only: icons stay crisp over the model. */
+.view-menu>summary{width:44px;height:44px;min-height:44px;padding:10px;border-radius:14px;background:rgba(255,255,255,.64);border-color:rgba(80,90,80,.24);color:#303b34;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.view-menu[open]>summary{background:rgba(255,234,215,.8)}
+.view-options{top:50px;width:274px;padding:5px;grid-template-columns:repeat(5,1fr);gap:4px;background:rgba(248,249,246,.45);border-color:rgba(80,90,80,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.view-options button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:52px;padding:5px 2px;background:rgba(255,255,255,.62);border-color:rgba(80,90,80,.2);color:#303b34;border-radius:9px}
+.view-options button:last-child{grid-column:auto}
+.view-options button:hover{background:rgba(255,238,222,.94)}
+.view-options button:disabled{opacity:.42}
+.view-options svg,.view-menu>summary svg{width:24px;height:24px;display:block;flex-shrink:0}
+.view-options .view-caption{font-size:9px;line-height:1.1;white-space:nowrap}
+.view-menu>summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+.view-options{position:static;transform:none;display:flex;width:auto;padding:4px;gap:4px;border-radius:12px}
+.view-options button{width:38px;height:38px;min-height:38px;padding:7px;flex:none}
+.view-options svg{width:22px;height:22px}.view-caption{display:none}
+#share-project{max-width:min(360px,92vw);border:1px solid #daddd6;border-radius:14px;padding:18px;color:#303733;background:#fff}
+#share-project::backdrop{background:#0005}#share-project canvas{width:240px;height:240px;max-width:100%;margin:12px auto;touch-action:auto}
+#share-project .stack{margin-top:10px}#share-project p{font-size:13px;overflow-wrap:anywhere}
+
+.view-options{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px;width:min(339px,calc(100vw - 16px))}
+.view-options button[aria-pressed="true"]{background:rgba(255,217,183,.92);border-color:#c76c29;color:#793e13}
+.view-options .panel-tool{border-top-color:#b3bcb2}
+@media(max-width:800px) and (pointer:coarse), (max-width:520px){
+#panel-actions>.stack,#panel-actions>#clear-selection,#panel-actions>label.check{display:none}
+}
+.view-options button{width:100%;padding:6px;min-width:0}.view-options button:last-child{grid-column:auto}
+
+#project-picker{width:min(390px,92vw);max-height:80dvh;overflow:auto;border:1px solid #daddd6;border-radius:14px;padding:16px;color:#303733;background:#fff}
+#project-picker::backdrop{background:#0005}#project-search{width:100%;padding:10px;margin:12px 0;border:1px solid #daddd6;border-radius:7px}
+#project-list{display:grid;gap:7px;margin:10px 0;max-height:45dvh;overflow:auto}#project-list a{display:block;padding:11px;border:1px solid #daddd6;border-radius:7px;color:#303733;text-decoration:none;overflow-wrap:anywhere}#project-list a:hover{background:#fff0e4}
+#projects-button{position:absolute;top:82px;left:calc(50% + 178px);z-index:4;width:38px;height:38px;padding:7px;background:#ffffffa0;border:1px solid #aab2aa80;border-radius:10px;backdrop-filter:blur(6px)}#projects-button svg{width:22px;height:22px}
+@media(max-width:800px){#projects-button{top:72px}}
+@media(max-width:440px){#projects-button{position:static;flex-shrink:0;margin-right:4px}.view-menu{display:flex;align-items:center;width:calc(100vw - 16px)}.view-options{width:auto;flex:1;gap:1px;padding:3px}.view-options button{padding:3px}.view-options svg{width:20px;height:20px}}
+#owner-login{margin:12px 0}#owner-login input{display:block;width:100%;padding:9px;border:1px solid #daddd6;border-radius:6px}.private-project{padding:10px;border:1px solid #daddd6;border-radius:8px}.private-project strong{overflow-wrap:anywhere;font-size:13px}.private-project .row{margin-top:8px;flex-wrap:wrap}.private-project button{font-size:12px;padding:7px}#owner-controls>.row{flex-wrap:wrap}
+
+#module-switch{margin:6px 0;width:100%;font-size:12px}#module-bar{position:absolute;top:126px;left:50%;transform:translateX(-50%);z-index:3;background:#ffffffe0;border:1px solid #cbd0c6;border-radius:9px;padding:6px 9px;max-width:calc(100vw - 20px);font-size:12px;text-align:center}#module-bar button{min-height:32px;padding:4px 8px;margin-left:6px;font-size:11px}#module-info{white-space:normal}@media(max-width:800px){#module-bar{top:116px}}
+
+#module-bar{display:flex;align-items:center;justify-content:center;gap:8px;width:max-content;max-width:calc(100vw - 20px);padding:4px 8px;box-sizing:border-box;white-space:nowrap}
+#module-info{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#module-bar button{flex:0 0 auto;margin:0;white-space:nowrap;min-height:32px}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header><div class="brand">ASSEMBLY<span style="color:#df742e"> /</span><small>МЕБЛЕВИЙ ТЕХНІЧНИЙ ПЕРЕГЛЯДАЧ</small></div><div class="header-actions"><span class="badge">DAE · LOCAL VIEWER</span><button class="mobile-toggle" id="settings" aria-label="Налаштування">☷</button><button class="primary" id="open">Відкрити DAE</button></div></header>
+<input type="file" accept=".dae" id="file" hidden><main id="viewport" aria-label="3D-модель меблів"></main>
+<aside class="card tools" id="tools"><h2>Відображення</h2><div class="row"><label for="opacity">Прозорість панелей</label><span class="value" id="opacity-value">58%</span></div><input id="opacity" type="range" min="0" max="82" value="58"><div class="muted">Форма зберігається навіть при 82%</div><hr><div class="legend"><i class="dot"></i>Корпусні панелі</div><div class="legend"><i class="dot dark"></i>Фурнітура та ABF · непрозорі</div><div class="legend"><i class="dot orange"></i>Вибрана деталь</div><hr><label class="check"><input id="edges" type="checkbox" checked>Контури панелей</label><label class="check"><input id="smooth" type="checkbox" checked>Згладжування після обертання</label><label class="check"><input id="extra-lines" type="checkbox" checked>Інші лінії SketchUp</label><div class="stack"><button id="fit">Центрувати модель</button><button id="all">Показати все</button></div><hr><details><summary>Як це працює</summary><p>Один палець — обертання. Два — масштаб і переміщення. На ПК: ліва кнопка — обертання, права — pan, колесо — zoom. Клік або список — вибір. Esc — зняти вибір.</p><p>Прозорість alphaHash: під час руху можлива зернистість. Назви ABF та геометрія визначають типи об’єктів евристично. Розміри — габарити геометрії в локальних осях деталі, з урахуванням одиниць DAE. Текстури не завантажуються. Потрібен інтернет для бібліотеки Three.js.</p></details></aside>
+<aside class="card info"><h2>Вибрана деталь</h2><strong id="name">Панель: не вибрано</strong><div id="size">Розмір: —</div><div class="muted" id="detail-note">Натисніть на панель у моделі</div><label class="muted" for="parts">Панелі моделі</label><select id="parts" disabled><option value="">Виберіть деталь…</option></select><hr><div class="stack"><button id="hide" disabled>Приховати панель</button><button id="isolate" disabled>Приховати все, крім виділеного</button><button id="restore" disabled>Повернути приховані</button></div></aside>
+<section class="empty" id="empty"><div class="icon">◇</div><h1>Кожна деталь.<br>На своєму місці.</h1><p>Відкрийте модель SketchUp у форматі DAE<br>та перегляньте її конструкцію.</p><button id="demo">Переглянути приклад</button><p class="muted">Файл обробляється лише у вашому браузері.<br>Без текстур. Без завантаження на сервер.</p></section>
+<div class="hint">Обертання · ліва кнопка &nbsp; / &nbsp; Pan · права &nbsp; / &nbsp; Zoom · колесо</div><footer><span id="status" role="status">Завантаження 3D-модуля…</span><span class="desktop">ASSEMBLY VIEW / мм</span></footer><div id="busy" hidden role="status">Обробка моделі…</div><div id="error" role="alert" hidden></div>
+<script type="module">
+const $=id=>document.getElementById(id);
+function error(message){$('error').textContent=message;$('error').hidden=false;}
+// All project resources are selected locally; the model and images are never uploaded.
+$('file').accept='.dae,.zip,.jpg,.jpeg,.png,.webp';$('file').multiple=true;$('open').textContent='Відкрити DAE / ZIP';
+const folderInput=document.createElement('input');folderInput.type='file';folderInput.multiple=true;folderInput.setAttribute('webkitdirectory','');folderInput.hidden=true;document.body.appendChild(folderInput);
+const imagesInput=document.createElement('input');imagesInput.type='file';imagesInput.multiple=true;imagesInput.accept='.jpg,.jpeg,.png,.webp';imagesInput.hidden=true;document.body.appendChild(imagesInput);
+const folderButton=document.createElement('button');folderButton.textContent='Відкрити папку проєкту';
+const texturesButton=document.createElement('button');texturesButton.textContent='Додати текстури';texturesButton.disabled=true;
+const modeLabel=document.createElement('label');modeLabel.htmlFor='mode';modeLabel.className='muted';modeLabel.textContent='Режим перегляду';
+const mode=document.createElement('select');mode.id='mode';mode.add(new Option('Монтажний','technical'));mode.add(new Option('З текстурами','textures'));
+const textureReport=document.createElement('div');textureReport.id='texture-report';textureReport.className='muted';textureReport.textContent='Для декорів відкрийте ZIP або папку з DAE та зображеннями.';
+$('tools').querySelector('h2').after(modeLabel,mode,folderButton,texturesButton,textureReport);
+const materialInfo=document.createElement('div');materialInfo.id='material';materialInfo.className='muted';materialInfo.textContent='Матеріал: —';$('size').after(materialInfo);
+const multiLabel=document.createElement('label');multiLabel.className='check';const multiToggle=document.createElement('input');multiToggle.type='checkbox';multiToggle.id='multi-select';multiLabel.append(multiToggle,document.createTextNode('Вибір кількох панелей'));const clearSelection=document.createElement('button');clearSelection.textContent='Зняти виділення';clearSelection.id='clear-selection';const selectionList=document.createElement('div');selectionList.id='selection-list';selectionList.style.cssText='max-height:220px;overflow:auto;overflow-wrap:anywhere';$('parts').after(multiLabel,clearSelection,selectionList);
+const infoCard=document.querySelector('.info'),panelActions=document.createElement('div');panelActions.id='panel-actions';
+let actionNode=document.querySelector('label[for="parts"]');while(actionNode){const next=actionNode.nextSibling;panelActions.appendChild(actionNode);actionNode=next;}
+const actionsToggle=document.createElement('button');actionsToggle.id='panel-actions-toggle';actionsToggle.textContent='Список панелей ▾';actionsToggle.setAttribute('aria-expanded','false');actionsToggle.setAttribute('aria-controls','panel-actions');
+actionsToggle.onclick=()=>{const expanded=infoCard.classList.toggle('mobile-expanded');actionsToggle.setAttribute('aria-expanded',String(expanded));actionsToggle.textContent=expanded?'Згорнути список ▴':'Дії з панелями ▾';};infoCard.append(actionsToggle,panelActions);
+const updatePhoneLayout=()=>{const footerHeight=document.querySelector('footer').getBoundingClientRect().height;document.documentElement.style.setProperty('--phone-footer',footerHeight+'px');document.documentElement.style.setProperty('--phone-bottom',(infoCard.getBoundingClientRect().height+footerHeight+16)+'px');};
+const phoneLayoutObserver=new ResizeObserver(updatePhoneLayout);phoneLayoutObserver.observe(infoCard);phoneLayoutObserver.observe(document.querySelector('footer'));
+$('empty').querySelector('p.muted').textContent='DAE, ZIP або папка проєкту. Файли обробляються лише у вашому браузері.';
+$('tools').querySelectorAll('details p').forEach(p=>{if(p.textContent.includes('Текстури не завантажуються.'))p.textContent=p.textContent.replace('Текстури не завантажуються.','У режимі декорів використовуються вибрані локальні текстури.');});
+try {
+const THREE=await import('three');
+const [{OrbitControls},{ColladaLoader},{EffectComposer},{Pass,FullScreenQuad},{OutputPass},{mergeGeometries,mergeVertices}]=await Promise.all([
+ import('three/addons/controls/OrbitControls.js'),import('three/addons/loaders/ColladaLoader.js'),import('three/addons/postprocessing/EffectComposer.js'),import('three/addons/postprocessing/Pass.js'),import('three/addons/postprocessing/OutputPass.js'),import('three/addons/utils/BufferGeometryUtils.js')]);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.outputColorSpace=THREE.SRGBColorSpace;
+$('viewport').appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color('#eeefeb');
+const camera=new THREE.PerspectiveCamera(38,1,.001,1000);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.12;
+const touchRotation=matchMedia('(pointer:coarse)');const updateRotationSpeed=()=>{controls.rotateSpeed=touchRotation.matches?.35:1;};updateRotationSpeed();touchRotation.addEventListener('change',updateRotationSpeed);
+scene.add(new THREE.HemisphereLight(0xffffff,0xa0a292,2.2));const sun=new THREE.DirectionalLight(0xffffff,2.4);sun.position.set(4,7,6);scene.add(sun);
+// Independent temporal transparency samples, averaged in LINEAR color space.
+// Unlike a fixed spatial hash, the grain actually changes between samples and cancels out.
+const transparencyFrame={value:0};
+const halton=(i,base)=>{let f=1,v=0;while(i>0){f/=base;v+=f*(i%base);i=Math.floor(i/base);}return v;};
+class CleanTransparencyPass extends Pass {
+ constructor(){super();this.accumulate=false;this.samples=0;this.width=1;this.height=1;this.holdUntilSamples=0;
+  const options={type:THREE.HalfFloatType,depthBuffer:false};
+  this.sample=new THREE.WebGLRenderTarget(1,1,{...options,depthBuffer:true});this.history=new THREE.WebGLRenderTarget(1,1,options);this.next=new THREE.WebGLRenderTarget(1,1,options);this.hold=new THREE.WebGLRenderTarget(1,1,{...options,depthBuffer:true});
+  this.mix=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{current:{value:null},history:{value:null},weight:{value:1}},vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',fragmentShader:'uniform sampler2D current;uniform sampler2D history;uniform float weight;varying vec2 vUv;void main(){vec4 c=texture2D(current,vUv);if(weight>=1.0){gl_FragColor=c;}else{gl_FragColor=mix(texture2D(history,vUv),c,weight);}}'});this.quad=new FullScreenQuad(this.mix);
+ }
+ reset(){this.samples=0;}
+ setSize(w,h){this.width=w;this.height=h;for(const rt of [this.sample,this.history,this.next,this.hold])rt.setSize(w,h);this.reset();}
+ renderOpaque(renderer,target){const materials=[panelMat,...(root?.userData.panelTextureCache?.values()||[])],opacities=materials.map(m=>m.opacity);try{materials.forEach(m=>m.opacity=1);renderer.setRenderTarget(target);renderer.clear();renderer.render(scene,camera);}finally{materials.forEach((m,i)=>m.opacity=opacities[i]);}}
+ render(renderer,writeBuffer){if(!this.accumulate){this.reset();transparencyFrame.value=0;if(this.holdUntilSamples>0)this.renderOpaque(renderer,writeBuffer);else{renderer.setRenderTarget(writeBuffer);renderer.clear();renderer.render(scene,camera);}return;}
+  if(this.samples===0&&this.holdUntilSamples>0)this.renderOpaque(renderer,this.hold);
+  const n=this.samples;transparencyFrame.value=n+1;camera.setViewOffset(this.width,this.height,halton(n+1,2)-.5,halton(n+1,3)-.5,this.width,this.height);
+  renderer.setRenderTarget(this.sample);renderer.clear();renderer.render(scene,camera);camera.clearViewOffset();
+  this.mix.uniforms.current.value=this.sample.texture;this.mix.uniforms.history.value=this.history.texture;this.mix.uniforms.weight.value=1/(n+1);renderer.setRenderTarget(this.next);this.quad.render(renderer);
+  [this.history,this.next]=[this.next,this.history];this.samples++;this.mix.uniforms.current.value=this.samples<this.holdUntilSamples?this.hold.texture:this.history.texture;this.mix.uniforms.history.value=this.sample.texture;this.mix.uniforms.weight.value=1;renderer.setRenderTarget(writeBuffer);this.quad.render(renderer);
+ }
+ dispose(){for(const rt of [this.sample,this.history,this.next,this.hold])rt.dispose();this.mix.dispose();this.quad.dispose();}
+}
+const composer=new EffectComposer(renderer);const taa=new CleanTransparencyPass();composer.addPass(taa);composer.addPass(new OutputPass());
+// Shared materials: opaque service geometry NEVER receives the panel opacity.
+const panelMat=new THREE.MeshStandardMaterial({color:0xcac4b4,roughness:.9,metalness:0,alphaHash:true,transparent:false,opacity:.42,side:THREE.DoubleSide,depthWrite:true,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+panelMat.onBeforeCompile=shader=>{shader.uniforms.transparencyFrame=transparencyFrame;shader.fragmentShader='uniform float transparencyFrame;\n'+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace('#include <alphahash_fragment>',`
+ #ifdef USE_ALPHAHASH
+  // Integer hash avoids precision-related stripes from sin-based noise.
+  uvec3 noiseKey=uvec3(uvec2(gl_FragCoord.xy),uint(gl_FragCoord.z*16777216.0));
+  uint noiseBits=noiseKey.x*1597334677u ^ noiseKey.y*3812015801u ^ noiseKey.z*2798796415u ^ uint(transparencyFrame)*1979697957u;
+  noiseBits^=noiseBits>>16;noiseBits*=2146121005u;noiseBits^=noiseBits>>15;noiseBits*=2221713035u;noiseBits^=noiseBits>>16;
+  if(diffuseColor.a<float(noiseBits & 16777215u)/16777216.0)discard;
+ #endif
+ `);};panelMat.customProgramCacheKey=()=> 'assembly-temporal-hash-v1';
+const qualityLabel=document.createElement('label');qualityLabel.className='muted';qualityLabel.htmlFor='quality';qualityLabel.textContent='Якість згладжування';
+const quality=document.createElement('select');quality.id='quality';quality.setAttribute('aria-label','Якість згладжування');quality.add(new Option('Швидка','64'));quality.add(new Option('Висока','128',true,true));quality.add(new Option('Максимальна','256'));const smoothLabel=$('smooth').closest('label');smoothLabel.after(qualityLabel,quality);
+const smoothProgress=document.createElement('div');smoothProgress.className='muted';smoothProgress.id='smooth-progress';quality.after(smoothProgress);
+const selectedMat=new THREE.MeshStandardMaterial({color:0xed873d,roughness:.8,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+const hardwareMat=new THREE.MeshStandardMaterial({color:0x536761,roughness:.62,metalness:.15,side:THREE.DoubleSide});
+const labelMat=new THREE.MeshBasicMaterial({color:0x253c36,side:THREE.DoubleSide});
+const unknownMat=new THREE.MeshStandardMaterial({color:0x969c90,roughness:.85,side:THREE.DoubleSide});
+const edgeMat=new THREE.LineBasicMaterial({color:0x343733,depthWrite:false});const serviceLineMat=new THREE.LineBasicMaterial({color:0x344d44});const otherLineMat=new THREE.LineBasicMaterial({color:0x858b7e});
+selectedMat.alphaHash=true;selectedMat.opacity=panelMat.opacity;selectedMat.onBeforeCompile=panelMat.onBeforeCompile;selectedMat.customProgramCacheKey=()=> 'assembly-selected-temporal-hash-v1';
+const shared=new Set([panelMat,selectedMat,hardwareMat,labelMat,unknownMat,edgeMat,serviceLineMat,otherLineMat]);
+let root=null,parts=[],selected=null,others=[],fileName='',counts={},loading=false,lastChange=0,dirty=true,settledFrames=0;
+let moduleMode=false,activeModule=null,moduleSnapshot=null,modules=[];
+const selection=new Set();let activeRemote=null,activeShare=null;
+const isolatedExtras=new Map();let isolated=false;
+let viewDirection=new THREE.Vector3(1,.7,1.35).normalize();
+const serviceRE=/(?:_?ABF[\s_.-]*(?:label|hole|drill|text|mark)|minifix|hinge|screw|side[\s_-]*drill|drilling|dowel|confirmat|cam[\s_-]*(?:lock|bolt)|bolt|washer|fastener|hardware|mounting[\s_-]*plate|plastic[\s_-]*base|фурнітур|фурнитур|кріплен|крепеж|петл|шуруп|конфірмат|конфирмат|отвір|отвор|отверст|свердл|сверлен|шкант|напрямн|направляющ|runner|drawer[\s_-]*slide)/i;
+const labelRE=/(?:ABF[\s_.-]*label|label|annotation|маркуван|маркиров|позначен|^мітк[аи]$)/i;
+// Whole product ancestors take precedence over words such as "фасад" in their names.
+const productRE=/(?:^_*ABF(?:_|Blocked)|\bBlum\b|TANDEMBOX|BLUMOTION|TIP[-_]ON|SERVO[-_]DRIVE|cabineo|CAMAR|Cargo_STAR|GOLA|Ferro_Fiori|S[сc]ilm|самор[іе]з|креплен|підвіс|навіс|ніжка|Zaślepka|^Лоток|Піддон|Провід|підсвіт|блок_живлення|^Вилка)/i;
+const numberedRE=/^_*\s*\d+(?:[.\s_-]|$)/;
+const partRE=/(?:деталь|панель|panel|shelf|shelve|side[\s_-]*panel|полиц|полк|фасад|боков|дно|кришк|крышк)/i;
+const tick=()=>new Promise(r=>setTimeout(r,0));
+function invalidate(){lastChange=performance.now();dirty=true;settledFrames=0;taa.accumulate=false;taa.reset();}
+let lastCameraMotion=-Infinity,motionOpaque=false;
+function syncPanelOpacity(){const opacity=motionOpaque?1:1-Number($('opacity').value)/100;panelMat.opacity=opacity;selectedMat.opacity=opacity;if(root?.userData.panelTextureCache)for(const mat of root.userData.panelTextureCache.values())mat.opacity=opacity;}
+controls.addEventListener('change',()=>{lastCameraMotion=performance.now();invalidate();});
+function resize(){const el=$('viewport');const ratio=Math.min(Math.max(devicePixelRatio,1.5),2,Math.sqrt(3000000/Math.max(1,el.clientWidth*el.clientHeight)));renderer.setPixelRatio(ratio);renderer.setSize(el.clientWidth,el.clientHeight);composer.setPixelRatio(ratio);composer.setSize(el.clientWidth,el.clientHeight);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix();invalidate();}
+quality.onchange=invalidate;
+new ResizeObserver(resize).observe($('viewport'));
+function frame(now){requestAnimationFrame(frame);controls.update();updateDimensionLabelAngles();const moving=performance.now()-lastCameraMotion<180;if(moving!==motionOpaque){motionOpaque=moving;syncPanelOpacity();invalidate();}if(!dirty)return;
+ const idle=now-lastChange>180;taa.holdUntilSamples=$('smooth').checked?Number(quality.value):0;
+ if($('smooth').checked&&idle&&!motionOpaque){taa.accumulate=true;composer.render();const target=Number(quality.value);smoothProgress.textContent=taa.samples>=target?'Згладжено · прозорість відновлено':'Підготовка прозорого кадру: '+Math.round(taa.samples/target*100)+'%';if(taa.samples>=target)dirty=false;}else{taa.accumulate=false;composer.render();smoothProgress.textContent=motionOpaque?'Рух: панелі тимчасово непрозорі':$('smooth').checked?'Панелі непрозорі · підготовка згладжування…':'Згладжування вимкнено';if(!$('smooth').checked&&!motionOpaque)dirty=false;}
+}requestAnimationFrame(frame);
+function displayName(o){return (o.userData.sourceName||o.name||'Без назви').replace(/^_+/,'').replace(/_+/g,' ').replace(/\.(?=\S)/g,'. ').trim();}
+function localBounds(owner,meshes){owner.updateWorldMatrix(true,false);const inv=owner.matrixWorld.clone().invert();const box=new THREE.Box3();const p=new THREE.Vector3();
+ for(const m of meshes){const a=m.geometry?.attributes.position;if(!a)continue;const matrix=inv.clone().multiply(m.matrixWorld);for(let i=0;i<a.count;i++){p.fromBufferAttribute(a,i).applyMatrix4(matrix);box.expandByPoint(p);}}return box;}
+function dimensions(owner,box){const s=box.getSize(new THREE.Vector3()),e=owner.matrixWorld.elements;return [s.x*Math.hypot(e[0],e[1],e[2]),s.y*Math.hypot(e[4],e[5],e[6]),s.z*Math.hypot(e[8],e[9],e[10])].map(v=>v*1000).sort((a,b)=>b-a);}
+function disposeTree(object){const geos=new Set(),mats=new Set(object.userData.sourceResources||[]),textures=new Set();object.traverse(o=>{if(o.geometry)geos.add(o.geometry);for(const m of [...[].concat(o.material||[]),...[].concat(o.userData.sourceMaterials||[])])if(!shared.has(m))mats.add(m);});geos.forEach(g=>g.dispose());mats.forEach(m=>{for(const v of Object.values(m))if(v?.isTexture)textures.add(v);m.dispose();});textures.forEach(t=>t.dispose());}
+function refresh(){updateModuleUI();const focusButton=document.querySelector('[data-focus-selection]');if(focusButton)focusButton.disabled=!selection.size;let hidden=parts.filter(p=>p.hidden).length;$('hide').disabled=!selection.size;$('restore').disabled=!hidden&&!isolated;$('isolate').disabled=!selection.size;clearSelection.disabled=!selection.size;$('hide').textContent=selection.size>1?'Приховати вибрані ('+selection.size+')':'Приховати панель';
+ $('name').textContent=selected?'Панель: '+selected.name:'Панель: не вибрано';$('size').textContent=selected?'Розмір: '+selected.size.map(v=>Math.round(v)).join(' × ')+' мм':'Розмір: —';
+ $('detail-note').textContent=selected?(selected.inferred?'Визначено за формою · локальні габарити':'Локальні габарити деталі без фурнітури'):'Натисніть на панель у моделі';
+ $('parts').value=selected?String(selected.id):'';
+ if(selection.size>1){$('name').textContent='Вибрано панелей: '+selection.size;$('size').textContent='Розміри кожної деталі — у списку нижче';$('detail-note').textContent='Ctrl / ⌘ + клік або режим множинного вибору';}
+ selectionList.replaceChildren();if(selection.size>1)for(const p of selection){const row=document.createElement('div');row.style.cssText='border-top:1px solid #daddd6;padding:9px 0;font-size:12px';const title=document.createElement('strong');title.style.fontSize='13px';title.textContent=p.name;const dimensions=document.createElement('div');dimensions.textContent=p.size.map(Math.round).join(' × ')+' мм';const materials=document.createElement('div');materials.className='muted';materials.textContent='Матеріал: '+(p.materials?.map(m=>m.name).join('; ')||'Не вказано');const remove=document.createElement('button');remove.textContent='Зняти';remove.setAttribute('aria-label','Зняти вибір: '+p.name);remove.onclick=()=>choose(p,true);row.append(title,dimensions,materials,remove);selectionList.appendChild(row);}
+ filterPanelOptions();
+ $('status').textContent=root?`${fileName} · Панелі: ${parts.length} · ABF labels: ${counts.labels} · Mesh: ${counts.mesh} · Лінії: ${counts.lines} · Приховано: ${hidden}`:'Готово · відкрийте DAE';}
+function normalMaterial(m){if(mode.value!=='textures')return panelMat;
+ // A source material can be shared by a panel and a fastener. Clone for panels only.
+ const originals=m.userData.sourceMaterials;if(!originals)return panelMat;
+ const cache=root.userData.panelTextureCache||(root.userData.panelTextureCache=new Map());
+ const convert=source=>{if(cache.has(source))return cache.get(source);const mat=source.clone();mat.transparent=false;mat.alphaHash=true;mat.alphaTest=0;mat.opacity=panelMat.opacity;mat.depthWrite=true;mat.polygonOffset=true;mat.polygonOffsetFactor=1;mat.polygonOffsetUnits=1;mat.onBeforeCompile=panelMat.onBeforeCompile;mat.customProgramCacheKey=()=> 'assembly-textured-temporal-hash-v1';mat.needsUpdate=true;cache.set(source,mat);(root.userData.sourceResources||=[]).push(mat);return mat;};
+ return Array.isArray(originals)?originals.map(convert):convert(originals);}
+function choose(part,additive=false){for(const p of selection)p.meshes.forEach(m=>m.material=normalMaterial(m));if(!additive||!part)selection.clear();if(part&&!part.hidden){if(additive&&selection.has(part))selection.delete(part);else selection.add(part);}selected=[...selection].at(-1)||null;for(const p of selection)p.meshes.forEach(m=>m.material=selectedMat);showMaterials();refresh();invalidate();}
+clearSelection.onclick=()=>choose(null);
+function showMaterials(){materialInfo.replaceChildren();if(selection.size>1){materialInfo.textContent='Матеріали вказані для кожної вибраної панелі.';return;}if(!selected){materialInfo.textContent='Матеріал: —';return;}const list=selected.materials||[];const main=document.createElement('div');main.textContent='Матеріал: '+(list[0]?.name||'Назву не збережено в DAE');materialInfo.appendChild(main);if(list.length>1){const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Усі матеріали деталі ('+list.length+')';details.appendChild(summary);for(const item of list){const row=document.createElement('div');row.textContent=item.name;details.appendChild(row);}materialInfo.appendChild(details);}}
+function applyMode(){if(root)root.traverse(o=>{if(!o.isMesh||o.userData.label)return;if(o.userData.part){o.material=selection.has(o.userData.part)?selectedMat:normalMaterial(o);}else o.material=mode.value==='textures'?(o.userData.sourceMaterials||unknownMat):(o.userData.service?hardwareMat:unknownMat);});$('opacity').disabled=false;invalidate();}
+mode.onchange=applyMode;
+function panelMaterials(meshes){const areas=new Map(),a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),ab=new THREE.Vector3(),ac=new THREE.Vector3();for(const m of meshes){const g=m.geometry,pos=g.attributes.position,index=g.index,materials=[].concat(m.userData.sourceMaterials||[]),groups=Array.isArray(m.userData.sourceMaterials)&&g.groups.length?g.groups:[{start:0,count:index?index.count:pos.count,materialIndex:0}];for(const group of groups){const mat=materials[group.materialIndex]||materials[0];if(!mat)continue;const name=mat.userData.displayName||mat.name||'Без назви';let area=0;for(let i=group.start;i+2<Math.min(group.start+group.count,index?index.count:pos.count);i+=3){a.fromBufferAttribute(pos,index?index.getX(i):i).applyMatrix4(m.matrixWorld);b.fromBufferAttribute(pos,index?index.getX(i+1):i+1).applyMatrix4(m.matrixWorld);c.fromBufferAttribute(pos,index?index.getX(i+2):i+2).applyMatrix4(m.matrixWorld);area+=ab.subVectors(b,a).cross(ac.subVectors(c,a)).length()/2;}areas.set(name,(areas.get(name)||0)+area);}}return [...areas].map(([name,area])=>({name,area})).sort((a,b)=>b.area-a.area);}
+function fit(selectedOnly=false,direction=viewDirection){if(!root)return;root.updateMatrixWorld(true);const box=new THREE.Box3();for(const p of parts)if(!p.hidden&&(selectedOnly!==true||selection.has(p)))box.union(p.box.clone().applyMatrix4(p.owner.matrixWorld));if(box.isEmpty()&&selectedOnly===true)return;if(box.isEmpty())root.traverseVisible(o=>{if(o.geometry){o.geometry.computeBoundingBox();box.union(o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld));}});if(box.isEmpty())return;
+ const center=box.getCenter(new THREE.Vector3()),radius=Math.max(box.getSize(new THREE.Vector3()).length()/2,.01),angle=Math.min(THREE.MathUtils.degToRad(camera.fov/2),Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*camera.aspect));
+ const distance=radius/Math.sin(angle)*1.12;controls.target.copy(center);camera.position.copy(center).add(direction.clone().normalize().multiplyScalar(distance));camera.near=Math.max(radius/2000,.00001);camera.far=Math.max(distance+radius*25,new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3()).length()*30);camera.updateProjectionMatrix();controls.minDistance=radius*.03;controls.maxDistance=radius*20;controls.update();invalidate();}
+const cleanName=name=>(name||'Без назви').replace(/^_+/,'').replace(/_+/g,' ').trim();
+const virtualPath=value=>{let v=value.replace(/\\/g,'/');try{v=decodeURIComponent(v);}catch{}const result=[];for(const part of v.split('/')){if(part==='..')result.pop();else if(part&&part!=='.')result.push(part);}return result.join('/').normalize('NFC');};
+function findResource(path,entries,daePath){const relative=virtualPath((daePath.includes('/')?daePath.slice(0,daePath.lastIndexOf('/')+1):'')+path),plain=virtualPath(path);let match=entries.find(e=>virtualPath(e.path)===relative)||entries.find(e=>virtualPath(e.path)===plain);if(match)return match;const base=plain.split('/').pop().toLowerCase(),matches=entries.filter(e=>virtualPath(e.path).split('/').pop().toLowerCase()===base);return matches.length===1?matches[0]:null;}
+// Rewrite image references to selected blobs BEFORE parsing: no remote texture requests.
+function sanitize(text,entries=[],daePath=''){const xml=new DOMParser().parseFromString(text,'application/xml');if(xml.querySelector('parsererror')||xml.documentElement.localName!=='COLLADA')throw Error('Файл не є коректним COLLADA DAE.');
+ if(xml.getElementsByTagNameNS('*','controller').length)throw Error('Цей viewer призначений для статичних DAE. Експортуйте модель без анімації та skin/controller.');
+ const unit=xml.getElementsByTagNameNS('*','unit')[0];if(unit&&(!Number.isFinite(Number(unit.getAttribute('meter')))||Number(unit.getAttribute('meter'))<=0))throw Error('Некоректний масштаб одиниць у DAE.');
+ const images=new Map(),urls=[],missing=new Set(),urlByFile=new Map();let textureCount=0;
+ for(const image of xml.getElementsByTagNameNS('*','image')){const ref=image.getElementsByTagNameNS('*','init_from')[0];if(!ref)continue;const path=ref.textContent.trim(),entry=findResource(path,entries,daePath);const found=entry&&/\.(?:png|jpe?g|webp)$/i.test(entry.path);images.set(image.getAttribute('id'),{path,found});if(found){let url=urlByFile.get(entry.file);if(!url){url=URL.createObjectURL(entry.file);urls.push(url);urlByFile.set(entry.file,url);}ref.textContent=url;textureCount++;}else{missing.add(path);ref.textContent='';}}
+ for(const effect of xml.getElementsByTagNameNS('*','effect')){const params=new Map([...effect.getElementsByTagNameNS('*','newparam')].map(p=>[p.getAttribute('sid'),p]));for(const texture of [...effect.getElementsByTagNameNS('*','texture')]){const key=texture.getAttribute('texture'),sampler=params.get(key),source=sampler?.getElementsByTagNameNS('*','source')[0]?.textContent.trim(),surface=params.get(source),imageId=surface?.getElementsByTagNameNS('*','init_from')[0]?.textContent.trim()||key;if(!images.get(imageId)?.found){const color=xml.createElementNS(xml.documentElement.namespaceURI,'color');color.textContent='.65 .65 .65 1';texture.replaceWith(color);}}}
+ const materials=new Map();let materialIndex=0;for(const material of xml.getElementsByTagNameNS('*','material')){const key='viewer_material_'+materialIndex++;materials.set(key,cleanName(material.getAttribute('name')||material.getAttribute('id')));material.setAttribute('name',key);}
+ // Retain original names in a lookup, give nodes unique names to avoid exporter sanitization.
+ const names=new Map();let index=0;for(const el of xml.getElementsByTagNameNS('*','node')){const key='__viewer_node_'+index++;names.set(key,el.getAttribute('name')||el.getAttribute('id')||'');el.setAttribute('name',key);}
+ for(const tag of ['instance_node','instance_geometry','instance_material'])for(const el of xml.getElementsByTagNameNS('*',tag)){const attr=tag==='instance_material'?'target':'url',v=el.getAttribute(attr);if(v&&!v.startsWith('#'))throw Error('DAE містить зовнішні посилання. Експортуйте самодостатній файл.');}
+ return {text:new XMLSerializer().serializeToString(xml),names,materials,urls,missing:[...missing],textureCount,unitMissing:!unit};}
+// SketchUp can export the two sides of a face as reversed duplicate triangles.
+// Compare absolute normal dot products: coplanar back/front triangles are NOT creases.
+function technicalEdges(g){const pos=g.attributes.position,idx=g.index,edges=new Map(),faces=new Set(),a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),ab=new THREE.Vector3(),ac=new THREE.Vector3();
+ const count=idx?idx.count:pos.count;for(let i=0;i<count;i+=3){const ids=[0,1,2].map(j=>idx?idx.getX(i+j):i+j),key=ids.slice().sort((x,y)=>x-y).join(',');if(faces.has(key))continue;faces.add(key);a.fromBufferAttribute(pos,ids[0]);b.fromBufferAttribute(pos,ids[1]);c.fromBufferAttribute(pos,ids[2]);const normal=ab.subVectors(b,a).cross(ac.subVectors(c,a)).normalize().clone();if(normal.lengthSq()<.5)continue;
+ for(let j=0;j<3;j++){const u=ids[j],v=ids[(j+1)%3],key=u<v?u+','+v:v+','+u;const e=edges.get(key);if(e){e.count++;if(Math.abs(e.normal.dot(normal))<.819152)e.crease=true;}else edges.set(key,{u,v,normal,count:1,crease:false});}}
+ const out=[];for(const e of edges.values())if(e.count===1||e.crease){a.fromBufferAttribute(pos,e.u);b.fromBufferAttribute(pos,e.v);out.push(a.x,a.y,a.z,b.x,b.y,b.z);}return new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(out,3));}
+function batchLines(model,lines,ownerMap){const buckets=new Map(),inv=model.matrixWorld.clone().invert();
+ for(const l of lines){if(!l.visible)continue;let owner=null;for(let a=l;a;a=a.parent)if(ownerMap.has(a)){owner=ownerMap.get(a);break;}const moduleOwner=findModuleOwner(l);const key=(moduleOwner?.uuid??'none')+':'+(owner?.id??'global')+':'+(l.userData.service?'service':'other');if(!buckets.has(key))buckets.set(key,{owner,moduleOwner,material:l.material,other:!!l.userData.otherLine,positions:[]});const bucket=buckets.get(key),pos=l.geometry.attributes.position,index=l.geometry.index;if(!pos)continue;const matrix=inv.clone().multiply(l.matrixWorld),v=new THREE.Vector3(),length=index?index.count:pos.count;
+ const push=i=>{v.fromBufferAttribute(pos,index?index.getX(i):i).applyMatrix4(matrix);bucket.positions.push(v.x,v.y,v.z);};if(l.isLineSegments){for(let i=0;i+1<length;i+=2){push(i);push(i+1);}}else {for(let i=0;i+1<length;i++){push(i);push(i+1);}if(l.isLineLoop&&length>1){push(length-1);push(0);}}
+ l.visible=false;l.userData.otherLine=false;if(owner)owner.attached=owner.attached.filter(o=>o!==l);}
+ for(const b of buckets.values()){const line=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(b.positions,3)),b.material);line.userData.otherLine=b.other;line.userData.moduleOwner=b.moduleOwner;model.add(line);if(b.owner)b.owner.attached.push(line);}}
+async function prepare(model,names){model.updateMatrixWorld(true);const meshes=[],lines=[],oldMats=new Set();counts={mesh:0,lines:0,service:0,labels:0,unknown:[]};
+ function visit(o,service=false,label=false){const source=names?.get(o.name);if(source!==undefined)o.userData.sourceName=source;const name=o.userData.sourceName||o.name||'';if(/ABF[\s_.-]*Label/i.test(name))counts.labels++;service=service||serviceRE.test(name)||labelRE.test(name)||productRE.test(name);label=label||labelRE.test(name);o.userData.service=service;o.userData.label=label;
+ if(o.isMesh||o.isLine){for(const mat of [].concat(o.material||[]))if(!shared.has(mat))oldMats.add(mat);if(service)counts.service++;if(o.isMesh){o.userData.sourceMaterials=o.material;counts.mesh++;meshes.push(o);}else{counts.lines++;lines.push(o);}}for(const child of o.children)visit(child,service,label);}
+ visit(model);const groups=new Map(),candidates=new Map();
+ for(const m of meshes){if(m.userData.service){m.material=m.userData.label?labelMat:hardwareMat;continue;}
+ let owner=null;for(let a=m;a&&a!==model;a=a.parent){const name=a.userData.sourceName||a.name||'';if(numberedRE.test(name)||partRE.test(name)){owner=a;break;}}
+ // Unnumbered geometry is grouped at its immediate named component, never at SketchUp root.
+ if(!owner){let candidate=m;while(candidate.parent&&candidate.parent!==model&&!(candidate.userData.sourceName||candidate.name))candidate=candidate.parent;if(!candidates.has(candidate))candidates.set(candidate,[]);candidates.get(candidate).push(m);continue;}
+ if(!groups.has(owner))groups.set(owner,{owner,meshes:[],inferred:false});groups.get(owner).meshes.push(m);}
+ for(const [owner,items] of candidates){const d=dimensions(owner,localBounds(owner,items));if(d[0]>60&&d[1]>40&&d[2]>=1&&d[2]<=65&&d[2]/d[1]<.3)groups.set(owner,{owner,meshes:items,inferred:true});else for(const m of items){m.material=unknownMat;counts.unknown.push(displayName(owner));}}
+ const result=[];let n=0;for(const group of groups.values()){const box=localBounds(group.owner,group.meshes),size=dimensions(group.owner,box);const p={...group,id:result.length,name:displayName(group.owner),box,size,materials:panelMaterials(group.meshes),hidden:false,attached:[],edge:null};result.push(p);p.meshes.forEach(m=>{m.material=panelMat;m.userData.part=p;});if(++n%30===0){$('busy').textContent=`Визначення деталей: ${n}…`;await tick();}}
+ const ownerMap=new Map(result.map(p=>[p.owner,p]));
+ // Lines already belonging to panels are replaced, NOT stacked with generated edges.
+ for(const l of lines){let p=null;for(let a=l;a;a=a.parent){if(ownerMap.has(a)){p=ownerMap.get(a);break;}}
+ if(l.userData.service){l.material=serviceLineMat;if(p)p.attached.push(l);}else if(p){l.visible=false;}else{l.material=otherLineMat;l.userData.otherLine=true;}}
+ for(const m of meshes.filter(m=>m.userData.service)){for(let a=m.parent;a;a=a.parent){if(ownerMap.has(a)){ownerMap.get(a).attached.push(m);break;}}}
+ // Merge a panel's triangle soup first. EdgesGeometry welds positions and suppresses coplanar seams.
+ for(const p of result){const inv=p.owner.matrixWorld.clone().invert(),chunks=[];let vertices=0;
+ for(const m of p.meshes){let g=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();for(const key of Object.keys(g.attributes))if(key!=='position')g.deleteAttribute(key);g.clearGroups();g.applyMatrix4(inv.clone().multiply(m.matrixWorld));vertices+=g.attributes.position.count;chunks.push(g);}
+ if(vertices<600000){const merged=mergeGeometries(chunks,false);if(merged){const welded=mergeVertices(merged,1e-5);const eg=technicalEdges(welded);const edge=new THREE.LineSegments(eg,edgeMat);edge.renderOrder=2;edge.visible=$('edges').checked;p.owner.add(edge);p.edge=edge;merged.dispose();welded.dispose();}}
+ else {const edge=new THREE.Box3Helper(p.box,edgeMat.color);edge.renderOrder=2;edge.material.depthWrite=false;p.owner.add(edge);p.edge=edge;edge.visible=$('edges').checked;}
+ chunks.forEach(g=>g.dispose());if(p.id%15===0){$('busy').textContent=`Контури панелей: ${p.id+1} / ${result.length}…`;await tick();}}
+ batchLines(model,lines,ownerMap);model.userData.sourceResources=[...oldMats];result.sort((a,b)=>a.name.localeCompare(b.name,'uk',{numeric:true}));result.forEach((p,i)=>p.id=i);return result;}
+async function install(model,name,names){let next;try{next=await prepare(model,names);}catch(e){disposeTree(model);throw e;}if(!counts.mesh){disposeTree(model);throw Error('DAE не містить поверхонь для відображення.');}
+ if(root){scene.remove(root);disposeTree(root);}isolatedExtras.clear();isolated=false;activeRemote=null;activeShare=null;if(location.protocol!=='file:'){const cleanUrl=new URL(location.href);cleanUrl.search='';cleanUrl.hash='';history.replaceState(null,'',cleanUrl);}resetModuleState();panelSearch.value='';root=model;parts=next;selected=null;selection.clear();fileName=name;others=[];viewDirection.set(1,.7,1.35).normalize();let savedCamera=null;root.traverse(o=>{if(o.isCamera)savedCamera=o;if(o.userData.otherLine){others.push(o);o.visible=$('extra-lines').checked;}});if(savedCamera){savedCamera.getWorldDirection(viewDirection).negate().normalize();}scene.add(root);
+ // Center only the top-level scene; per-part transforms and dimensions remain intact.
+ const center=new THREE.Box3().setFromObject(root).getCenter(new THREE.Vector3());root.position.sub(center);root.updateMatrixWorld(true);
+ discoverModules();$('parts').replaceChildren(new Option('Виберіть деталь…',''),...parts.map(p=>new Option(p.name,String(p.id))));$('parts').disabled=!parts.length;$('empty').hidden=true;let diag=$('diagnostics');if(!diag){diag=document.createElement('p');diag.id='diagnostics';$('tools').querySelector('details').appendChild(diag);}diag.textContent=counts.unknown.length?'Невизначені поверхні залишено непрозорими ('+counts.unknown.length+'): '+[...new Set(counts.unknown)].join(', '):'Усі поверхні класифіковано.';refresh();fit();}
+let currentProject=[];
+async function projectEntries(files){const entries=[...files].map(file=>({path:file.webkitRelativePath||file.name,file}));if(entries.length===1&&/\.zip$/i.test(entries[0].path)){
+ $('busy').textContent='Розпакування ZIP…';const {unzip}=await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js');let total=0,count=0,tooLarge=false;
+ if(entries[0].file.size>256*1024*1024)throw Error('ZIP завеликий. Ліміт — 256 МБ.');const bytes=new Uint8Array(await entries[0].file.arrayBuffer());
+ const archive=await new Promise((resolve,reject)=>unzip(bytes,{filter:entry=>{if(!/\.(?:dae|png|jpe?g|webp)$/i.test(entry.name))return false;total+=entry.originalSize;count++;if(entry.originalSize>128*1024*1024||total>512*1024*1024||count>3000){tooLarge=true;return false;}return true;}},(err,result)=>err?reject(err):resolve(result)));
+ if(tooLarge)throw Error('Проєкт у ZIP перевищує ліміт 512 МБ або 3000 файлів.');return Object.entries(archive).map(([path,data])=>({path,file:new File([data],path.split('/').pop(),{type:/\.png$/i.test(path)?'image/png':/\.webp$/i.test(path)?'image/webp':/\.jpe?g$/i.test(path)?'image/jpeg':'application/xml'})}));
+ }return entries;}
+async function loadEntries(entries,preserve=false){if(loading||!entries.length)return;loading=true;for(const b of [$('open'),folderButton,texturesButton])b.disabled=true;$('busy').hidden=false;$('busy').textContent='Читання проєкту…';$('error').hidden=true;let clean,parsed;const oldCounts=counts;
+ const saved=preserve?{camera:camera.position.clone(),target:controls.target.clone(),near:camera.near,far:camera.far,hidden:parts.filter(p=>p.hidden).map(p=>p.name),selected:[...selection].map(p=>p.id),isolated,remote:activeRemote,share:activeShare}:null;
+ await tick();try{if(!entries[0]?.file)entries=await projectEntries(entries);
+ const daes=entries.filter(e=>/\.dae$/i.test(e.path));if(daes.length!==1)throw Error(daes.length?'У проєкті кілька DAE. Виберіть одну модель та її текстури.':'Виберіть DAE, ZIP або папку з одним DAE.');const dae=daes[0];
+ clean=sanitize(await dae.file.text(),entries,dae.path);await tick();const manager=new THREE.LoadingManager(),allowed=new Set(clean.urls),failed=[];let finish;
+ const done=new Promise(resolve=>finish=resolve);manager.onLoad=finish;manager.onError=url=>failed.push(url);manager.setURLModifier(url=>{if(!allowed.has(url))throw Error('Зовнішній ресурс заблоковано. Додайте текстуру до проєкту.');return url;});manager.itemStart('parse');
+ parsed=new ColladaLoader(manager).parse(clean.text,'');manager.itemEnd('parse');$('busy').textContent='Завантаження текстур…';await done;
+ const seen=new Set();parsed.scene.traverse(o=>{for(const mat of [].concat(o.material||[])){if(seen.has(mat))continue;seen.add(mat);mat.userData.displayName=clean.materials.get(mat.name)||cleanName(mat.name);mat.name=mat.userData.displayName;mat.transparent=false;mat.opacity=1;mat.depthWrite=true;mat.side=THREE.DoubleSide;for(const key of ['map','normalMap','specularMap','emissiveMap']){const tex=mat[key];if(tex){if(!tex.image?.width){mat[key]=null;tex.dispose();}else tex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());}}mat.needsUpdate=true;}});
+ await install(parsed.scene,dae.path.split('/').pop(),clean.names);currentProject=entries;applyMode();showMaterials();
+ textureReport.textContent=`Текстури: ${clean.textureCount-failed.length} / ${clean.textureCount+clean.missing.length}`+(clean.missing.length?' · Відсутні: '+clean.missing.map(p=>virtualPath(p).split('/').pop()).join(', '):' · Усі зображення знайдено')+(failed.length?' · Не вдалося прочитати зображення: '+failed.length:'');
+ if(saved){for(const p of parts)if(saved.hidden.includes(p.name))setHidden(p,true);choose(null);for(const id of saved.selected){const p=parts[id];if(p&&!p.hidden)choose(p,true);}activeRemote=saved.remote;activeShare=saved.share;if(saved.isolated)isolateSelected();camera.position.copy(saved.camera);camera.near=saved.near;camera.far=saved.far;controls.target.copy(saved.target);camera.updateProjectionMatrix();controls.update();refresh();invalidate();}
+ if(clean.unitMissing)error('У DAE немає одиниць. За стандартом прийнято метри; перевірте розміри.');return true;
+ }catch(e){if(parsed?.scene&&parsed.scene!==root)disposeTree(parsed.scene);counts=oldCounts;console.error(e);error('Не вдалося відкрити модель: '+e.message);}finally{clean?.urls.forEach(url=>URL.revokeObjectURL(url));loading=false;$('busy').hidden=true;$('open').disabled=false;folderButton.disabled=false;texturesButton.disabled=!currentProject.length;$('file').value='';folderInput.value='';imagesInput.value='';}}
+$('open').onclick=()=>$('file').click();$('file').onchange=e=>loadEntries([...e.target.files]);folderButton.onclick=()=>folderInput.click();folderInput.onchange=e=>loadEntries([...e.target.files]);texturesButton.onclick=()=>imagesInput.click();imagesInput.onchange=e=>{const added=[...e.target.files].map(file=>({path:file.name,file}));const names=new Set(added.map(e=>e.path));loadEntries([...currentProject.filter(e=>!names.has(e.path)),...added],true);};
+$('opacity').oninput=()=>{syncPanelOpacity();$('opacity-value').textContent=$('opacity').value+'%';invalidate();};
+$('edges').onchange=()=>{parts.forEach(p=>{if(p.edge)p.edge.visible=!p.hidden&&$('edges').checked;});invalidate();};$('smooth').onchange=invalidate;$('extra-lines').onchange=()=>{others.forEach(o=>{if(isolatedExtras.has(o))isolatedExtras.set(o,$('extra-lines').checked);else o.visible=$('extra-lines').checked;});invalidate();};
+$('parts').onchange=()=>choose($('parts').value===''?null:parts[Number($('parts').value)],multiToggle.checked);
+function setHidden(p,value){p.hidden=value;[...p.meshes,...p.attached].forEach(o=>o.visible=!value);if(p.edge)p.edge.visible=!value&&$('edges').checked;}
+function restoreExtras(){for(const [o,visible] of isolatedExtras)o.visible=visible;isolatedExtras.clear();isolated=false;}
+function isolateSelected(){if(!selection.size||!root)return;restoreExtras();const allowed=new Set();for(const p of parts){setHidden(p,!selection.has(p));if(selection.has(p)){for(const o of [...p.meshes,...p.attached,p.edge])if(o)allowed.add(o);}}root.traverse(o=>{if((o.isMesh||o.isLine||o.isPoints||o.isSprite)&&!allowed.has(o)&&!o.userData.part){isolatedExtras.set(o,o.visible);o.visible=false;}});isolated=true;refresh();invalidate();}
+$('isolate').onclick=isolateSelected;
+$('hide').onclick=()=>{const chosen=[...selection];choose(null);chosen.forEach(p=>setHidden(p,true));refresh();invalidate();};
+$('restore').onclick=()=>{restoreExtras();parts.forEach(p=>setHidden(p,false));refresh();invalidate();};$('all').onclick=()=>{restoreExtras();choose(null);parts.forEach(p=>setHidden(p,false));refresh();fit();};$('fit').onclick=fit;$('settings').onclick=()=>$('tools').classList.toggle('open');
+const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null;const pointers=new Set();
+renderer.domElement.addEventListener('pointerdown',e=>{pointers.add(e.pointerId);if(e.button===0&&pointers.size===1)down={x:e.clientX,y:e.clientY,id:e.pointerId};else down=null;});
+renderer.domElement.addEventListener('pointermove',e=>{if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>5)down=null;});
+renderer.domElement.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);down=null;});
+renderer.domElement.addEventListener('pointerup',e=>{pointers.delete(e.pointerId);if(!down||down.id!==e.pointerId)return;down=null;const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(pointer,camera);const targets=parts.filter(p=>!p.hidden).flatMap(p=>p.meshes);const hits=ray.intersectObjects(targets,false);const p=hits[0]?.object.userData.part;if(moduleMode&&!activeModule){if(p?.module)enterModule(p.module);return;}const additive=e.ctrlKey||e.metaKey||multiToggle.checked;if(p)choose(!additive&&selection.size===1&&selection.has(p)?null:p,additive);else if(!additive)choose(null);});
+window.addEventListener('keydown',e=>{if(e.key==='Escape')choose(null);});
+renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();error('Графічний контекст втрачено. Оновіть сторінку та відкрийте DAE знову.');});
+// Built-in demonstration; uses the same classification, selection, materials and edge pipeline.
+$('demo').onclick=async()=>{if(loading)return;loading=true;$('busy').hidden=false;try{const model=new THREE.Group();
+ const panel=(name,x,y,z,w,h,d)=>{const g=new THREE.Group();g.name=name;g.position.set(x,y,z);const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),unknownMat);g.add(m);model.add(g);return g;};
+ panel('__36. Деталь',-.309,.55,0,.018,1.059,.596);panel('__41. Деталь',.309,.55,0,.018,1.059,.596);panel('__42. Дно',0,.03,0,.6,.018,.596);panel('__43. Кришка',0,1.07,0,.6,.018,.596);panel('__44. Полиця',0,.56,0,.6,.018,.56);panel('__45. Задня панель',0,.55,-.295,.6,1.02,.006);
+ for(const x of [-.295,.295])for(const y of [.2,.85]){const g=new THREE.Group();g.name='hingeCup';g.position.set(x,y,.23);g.add(new THREE.Mesh(new THREE.CylinderGeometry(.019,.019,.012,20).rotateZ(Math.PI/2),hardwareMat));model.add(g);}
+ await install(model,'Демонстраційна шафа');}catch(e){error(e.message);}finally{loading=false;$('busy').hidden=true;}};
+
+function viewIcon(label){
+ const faces={front:'4,7 12,11 12,21 4,17',side:'12,11 20,7 20,17 12,21',top:'12,3 20,7 12,11 4,7'};
+ let content;
+ if(label==='Наблизити вибране')content='<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><circle cx="11" cy="11" r="4"/><path d="m14 14 4 4"/>';
+ else{const face=label==='Спереду'?'front':label==='Збоку'?'side':label==='Зверху'?'top':null;content=(face?'<polygon points="'+faces[face]+'" fill="#dd813e" fill-opacity=".8" stroke="none"/>':'')+'<path d="m12 3 8 4v10l-8 4-8-4V7zM4 7l8 4 8-4m-8 4v10"/>';}
+ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'+content+'</svg>';
+}
+const viewMenu=document.createElement('div');viewMenu.setAttribute('role','toolbar');viewMenu.setAttribute('aria-label','Дії з панелями та поширення');viewMenu.className='view-menu';const viewSummary=document.createElement('summary');viewSummary.innerHTML=viewIcon('3D');viewSummary.title='Ракурси та наближення';viewSummary.setAttribute('aria-label','Ракурси та наближення');const viewOptions=document.createElement('div');viewOptions.className='view-options';viewMenu.append(viewOptions);document.body.append(viewMenu);
+function viewAction(label,action){const button=document.createElement('button');button.setAttribute('aria-label',label);button.title=label;button.innerHTML=viewIcon(label);const caption=document.createElement('span');caption.className='view-caption';caption.textContent=label==='Наблизити вибране'?'Вибране':label;button.append(caption);button.onclick=()=>{viewMenu.open=false;action();};viewOptions.append(button);return button;}
+const focusSelection=viewAction('Наблизити вибране',()=>fit(true,camera.position.clone().sub(controls.target)));focusSelection.disabled=true;focusSelection.dataset.focusSelection='';
+
+document.addEventListener('pointerdown',event=>{if(!viewMenu.contains(event.target))viewMenu.open=false;});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')viewMenu.open=false;});
+
+
+const shareDialog=document.createElement('dialog');shareDialog.id='share-project';shareDialog.innerHTML='<strong>Поділитися проєктом</strong><p id="share-message"></p><div id="share-qr"></div><div class="stack"><button id="share-copy">Копіювати посилання</button><button id="share-download">Завантажити QR</button><button id="share-native">Поділитися…</button><button id="share-close">Закрити</button></div>';document.body.append(shareDialog);
+let shareUrl='',qrPromise;
+async function displayShare(url){
+ if(!shareDialog.open)shareDialog.showModal();shareUrl=url;$('share-qr').replaceChildren();$('share-download').disabled=true;$('share-copy').disabled=$('share-native').disabled=!url;
+ if(!url){$('share-message').textContent='Для QR спочатку відкрийте проєкт із приватного кабінету.';return;}
+ $('share-message').textContent='Підготовка QR…';
+ try{qrPromise??=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/qr-creator@1.0.0/dist/qr-creator.min.js';script.onload=resolve;script.onerror=()=>reject(Error('QR'));document.head.append(script);});await qrPromise;
+ QrCreator.render({text:url,radius:0,ecLevel:'M',fill:'#000',background:'#fff',size:256},$('share-qr'));const source=$('share-qr').querySelector('canvas'),canvas=document.createElement('canvas');canvas.width=canvas.height=320;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,320,320);ctx.drawImage(source,32,32);source.replaceWith(canvas);$('share-download').disabled=false;$('share-message').textContent='Цей QR відкриває лише один проєкт. Будь-хто з цим посиланням зможе його переглянути.';
+ }catch{qrPromise=null;$('share-message').textContent='QR недоступний. Скопіюйте посилання.';}
+}
+const shareButton=viewAction('Поділитися / QR',async()=>{
+ if(!shareDialog.open)shareDialog.showModal();$('share-qr').replaceChildren();$('share-copy').disabled=$('share-native').disabled=$('share-download').disabled=true;$('share-message').textContent='Підготовка посилання…';
+ try{if(activeShare){await displayShare(projectShareUrl(activeShare));return;}if(!activeRemote){await displayShare('');return;}const data=await accessProject('create-share',{path:activeRemote});activeShare=data.token;await displayShare(projectShareUrl(activeShare));}catch(e){$('share-message').textContent=e.message;}
+});
+shareButton.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10 6-4M9 14l6 4"/></svg>';
+$('share-close').onclick=()=>shareDialog.close();
+$('share-copy').onclick=async()=>{try{await navigator.clipboard.writeText(shareUrl);$('share-message').textContent='Посилання скопійовано';}catch{$('share-message').textContent=shareUrl;}};
+$('share-native').hidden=!navigator.share;$('share-native').onclick=async()=>{try{await navigator.share({title:'3D-проєкт меблів',url:shareUrl});}catch(e){if(e.name!=='AbortError')$('share-message').textContent='Скористайтеся копіюванням посилання.';}};
+$('share-download').onclick=()=>{const a=document.createElement('a');a.download='project-qr.png';a.href=$('share-qr').querySelector('canvas').toDataURL('image/png');a.click();};
+
+
+// Compact equivalents of existing actions; original controls remain the source of state.
+function panelTool(label,paths,action){const b=viewAction(label,action);b.classList.add('panel-tool');b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+paths+'</svg>';return b;}
+const multiIcon=panelTool('Вибір кількох панелей','<rect x="3" y="3" width="12" height="12" rx="2"/><path d="M9 18v3h12V9h-3M6 9l2 2 4-4"/>',()=>{multiToggle.checked=!multiToggle.checked;syncPanelTools();});
+const hideIcon=panelTool('Приховати вибрані панелі','<path d="M3 3l18 18M10 5c5-1 9 4 11 7l-3 4M6 6c-2 2-4 4-5 6 4 6 9 9 15 5"/><path d="M10 10a3 3 0 0 0 4 4"/>',()=>$('hide').click());
+const isolateIcon=panelTool('Приховати все, крім виділеного','<rect x="8" y="7" width="8" height="10" rx="1" fill="currentColor" fill-opacity=".2"/><path d="M5 3H2v5m17-5h3v5M2 16v5h3m17-5v5h-3"/>',()=>$('isolate').click());
+const restoreIcon=panelTool('Повернути приховані панелі','<path d="M4 8a9 9 0 1 1-1 8M4 3v5h5"/><rect x="9" y="9" width="7" height="8" rx="1"/>',()=>$('restore').click());
+const clearIcon=panelTool('Зняти виділення','<rect x="3" y="3" width="14" height="14" rx="2" stroke-dasharray="3 3"/><path d="m14 14 7 7m0-7-7 7"/>',()=>clearSelection.click());
+const modeIcon=panelTool('Режим перегляду','',()=>{mode.value=mode.value==='textures'?'technical':'textures';applyMode();syncPanelTools();});
+function syncPanelTools(){
+ multiIcon.setAttribute('aria-pressed',String(multiToggle.checked));hideIcon.disabled=$('hide').disabled;isolateIcon.disabled=$('isolate').disabled;restoreIcon.disabled=$('restore').disabled;clearIcon.disabled=clearSelection.disabled;
+ const textured=mode.value==='textures';modeIcon.setAttribute('aria-pressed',String(textured));const label=textured?'З текстурами — перейти в монтажний режим':'Монтажний режим — показати текстури';modeIcon.title=label;modeIcon.setAttribute('aria-label',label);
+ modeIcon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/>'+(textured?'<path d="M7 3c-4 6 7 6 2 12s0 6 0 6M14 3c-4 5 6 8 2 12s-1 6-1 6M20 6c-5 4 3 7-1 12"/>':'<path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>')+'</svg>';
+}
+const toolStateObserver=new MutationObserver(syncPanelTools);for(const b of [$('hide'),$('isolate'),$('restore'),clearSelection])toolStateObserver.observe(b,{attributes:true,attributeFilter:['disabled']});
+multiToggle.addEventListener('change',syncPanelTools);mode.addEventListener('change',syncPanelTools);syncPanelTools();
+
+
+const SB_URL='https://szzdtuksllxsdhjxhhcn.supabase.co';
+const SB_KEY='sb_publishable_AYXin55Aak6kFI5Q9agD2Q_rWL2B2Gp';
+const OWNER_ID='0fc30e5c-48a0-4a59-ad71-cc555ee3a8cd';
+const SITE='https://vasyaprokopenko888-star.github.io/3d-montazh-viewer/';
+let ownerSession=null;try{ownerSession=JSON.parse(sessionStorage.getItem('assembly-owner')||'null');}catch{}
+function saveSession(session){if(session&&!session.expires_at)session.expires_at=Math.floor(Date.now()/1000)+(session.expires_in||3600);ownerSession=session;try{if(session)sessionStorage.setItem('assembly-owner',JSON.stringify(session));else sessionStorage.removeItem('assembly-owner');}catch{}}
+async function ownerToken(){
+ if(!ownerSession)throw Error('Увійдіть як власник.');
+ if((ownerSession.expires_at||0)*1000<Date.now()+60000){
+  const r=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:ownerSession.refresh_token})});
+  if(!r.ok){saveSession(null);throw Error('Сеанс завершено. Увійдіть повторно.');}saveSession(await r.json());
+ }
+ return ownerSession.access_token;
+}
+async function accessProject(action,extra={}){
+ const headers={apikey:SB_KEY,'Content-Type':'application/json'};if(action!=='resolve')headers.Authorization='Bearer '+await ownerToken();
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+ try{const r=await fetch(SB_URL+'/functions/v1/viewer-access',{method:'POST',headers,body:JSON.stringify({action,...extra}),signal:controller.signal});const data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.error||'Сервер недоступний. Перевірте встановлення viewer-access.');return data;}finally{clearTimeout(timer);}
+}
+function projectShareUrl(token){const url=new URL(SITE);url.hash='share='+token;return url.href;}
+const projectDialog=document.createElement('dialog');projectDialog.id='project-picker';projectDialog.setAttribute('aria-labelledby','project-heading');
+projectDialog.innerHTML='<strong id="project-heading">Кабінет власника</strong><form id="owner-login" class="stack"><label>Електронна пошта<input id="owner-email" type="email" autocomplete="username" required></label><label>Пароль<input id="owner-password" type="password" autocomplete="current-password" required></label><button type="submit" id="owner-submit">Увійти</button></form><div id="owner-controls" hidden><input id="project-search" type="search" placeholder="Знайти проєкт…" aria-label="Пошук проєкту"><div class="row"><button id="project-upload">Додати ZIP</button><button id="project-refresh">Оновити</button><button id="owner-logout">Вийти</button></div><div id="project-list"></div></div><p id="project-status" role="status"></p><button id="project-close">Закрити</button>';
+document.body.append(projectDialog);
+const projectsButton=document.createElement('button');projectsButton.id='projects-button';projectsButton.title='Кабінет власника';projectsButton.setAttribute('aria-label','Кабінет власника');projectsButton.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 6h7l3 3h10v12H2z"/><rect x="13" y="5" width="7" height="6" rx="1"/><path d="M14 5V3a2.5 2.5 0 0 1 5 0v2"/></svg>';viewMenu.prepend(projectsButton);
+let projectFiles=[],projectFetching=false;
+function ownerUI(){const signed=!!ownerSession;$('owner-login').hidden=signed;$('owner-controls').hidden=!signed;if(!signed){projectFiles=[];$('project-list').replaceChildren();}}
+function renderProjectList(){const query=$('project-search').value.toLocaleLowerCase('uk');$('project-list').replaceChildren();for(const f of projectFiles.filter(f=>f.name.toLocaleLowerCase('uk').includes(query))){
+ const row=document.createElement('div');row.className='private-project';const name=document.createElement('strong');name.textContent=f.name;const actions=document.createElement('div');actions.className='row';
+ const open=document.createElement('button');open.textContent='Відкрити';open.onclick=async()=>{open.disabled=true;try{const data=await accessProject('open',{path:f.name});projectDialog.close();await downloadPrivate(data,f.name,null);}catch(e){$('project-status').textContent=e.message;}finally{open.disabled=false;}};
+ const share=document.createElement('button');share.textContent='QR / Посилання';share.onclick=async()=>{share.disabled=true;try{const data=await accessProject('create-share',{path:f.name});projectDialog.close();await displayShare(projectShareUrl(data.token));}catch(e){$('project-status').textContent=e.message;}finally{share.disabled=false;}};
+ const revoke=document.createElement('button');revoke.textContent='Вимкнути QR';revoke.onclick=async()=>{if(!confirm('Вимкнути всі раніше видані QR-посилання для '+f.name+'?'))return;revoke.disabled=true;try{await accessProject('revoke',{path:f.name});if(activeRemote===f.name)activeShare=null;$('project-status').textContent='Попередні посилання вимкнено. Уже завантажені копії не видаляються.';}catch(e){$('project-status').textContent=e.message;}finally{revoke.disabled=false;}};
+ actions.append(open,share,revoke);row.append(name,actions);$('project-list').append(row);
+}}
+async function fetchProjectList(){if(projectFetching)return;projectFetching=true;$('project-refresh').disabled=true;$('project-status').textContent='Завантаження приватних проєктів…';try{const data=await accessProject('list');projectFiles=data.files;renderProjectList();$('project-status').textContent=projectFiles.length?'Проєктів: '+projectFiles.length:'Додайте ZIP у приватне сховище projects.';}catch(e){$('project-status').textContent=e.message;}finally{projectFetching=false;$('project-refresh').disabled=false;ownerUI();}}
+projectsButton.onclick=()=>{ownerUI();projectDialog.showModal();if(ownerSession)fetchProjectList();else $('project-status').textContent='Вхід лише для власника. Для перегляду за QR входити не потрібно.';};
+$('owner-login').onsubmit=async e=>{e.preventDefault();$('owner-submit').disabled=true;$('project-status').textContent='Вхід…';try{
+ const r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:$('owner-email').value.trim(),password:$('owner-password').value})});const data=await r.json();if(!r.ok)throw Error('Не вдалося увійти. Перевірте пошту та пароль.');if(data.user?.id!==OWNER_ID){await fetch(SB_URL+'/auth/v1/logout',{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+data.access_token}});throw Error('Цей обліковий запис не є власником.');}saveSession(data);$('owner-password').value='';ownerUI();await fetchProjectList();
+ }catch(e){$('project-status').textContent=e.message;}finally{$('owner-submit').disabled=false;}};
+$('owner-logout').onclick=async()=>{const token=ownerSession?.access_token;saveSession(null);ownerUI();$('project-status').textContent='Ви вийшли.';if(token)await fetch(SB_URL+'/auth/v1/logout',{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+token}}).catch(()=>{});};
+const uploadInput=document.createElement('input');uploadInput.type='file';uploadInput.accept='.zip';uploadInput.hidden=true;document.body.append(uploadInput);
+$('project-upload').onclick=()=>uploadInput.click();uploadInput.onchange=async()=>{const file=uploadInput.files[0];if(!file)return;$('project-upload').disabled=true;try{
+ if(!/\.zip$/i.test(file.name))throw Error('Виберіть ZIP.');if(file.size>50*1024*1024)throw Error('Для цього завантаження ліміт 50 МБ. Більші файли потребують окремого налаштування сховища.');
+ const baseName=file.name.replace(/\.zip$/i,'').replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'project';const path=baseName+'-'+crypto.randomUUID().slice(0,8)+'.zip';$('project-status').textContent='Завантаження ZIP…';const token=await ownerToken();
+ const r=await fetch(SB_URL+'/storage/v1/object/projects/'+path,{method:'POST',headers:{apikey:SB_KEY,Authorization:'Bearer '+token,'Content-Type':'application/zip','x-upsert':'false'},body:file});
+ if(!r.ok)throw Error('ZIP не завантажено. Перевірте правила доступу та ліміт сховища.');await fetchProjectList();$('project-status').textContent='ZIP додано як '+path+' (без перезапису інших проєктів).';
+ }catch(e){$('project-status').textContent=e.message;}finally{uploadInput.value='';$('project-upload').disabled=false;}};
+$('project-search').oninput=renderProjectList;$('project-refresh').onclick=fetchProjectList;$('project-close').onclick=()=>projectDialog.close();
+async function downloadPrivate(data,path,token){
+ if(loading)throw Error('Дочекайтеся завершення завантаження.');
+ const url=new URL(data.url);if(url.origin!==SB_URL||!url.pathname.startsWith('/storage/v1/object/sign/projects/'))throw Error('Некоректна адреса файлу.');
+ loading=true;$('error').hidden=true;$('busy').hidden=false;for(const b of [$('open'),folderButton,texturesButton])b.disabled=true;
+ try{const response=await fetch(url.href,{cache:'no-store'});if(!response.ok)throw Error('Не вдалося отримати ZIP. Відкрийте проєкт повторно.');
+ const reader=response.body.getReader(),chunks=[];let bytes=0;const limit=256*1024*1024;
+ while(true){const {done,value}=await reader.read();if(done)break;bytes+=value.byteLength;if(bytes>limit){await reader.cancel();throw Error('ZIP перевищує 256 МБ.');}chunks.push(value);$('busy').textContent='Завантаження проєкту: '+(bytes/1048576).toFixed(1)+' МБ';}
+ loading=false;const ok=await loadEntries([new File(chunks,'project.zip',{type:'application/zip'})]);if(!ok)return;
+ activeRemote=path;activeShare=token;
+ if(location.protocol!=='file:'){const u=new URL(location.href);u.search='';u.hash=token?'share='+token:'';history.replaceState(null,'',u);}
+ }catch(e){error(e.message);}finally{loading=false;$('busy').hidden=true;$('open').disabled=false;folderButton.disabled=false;texturesButton.disabled=!currentProject.length;}
+}
+async function openLinkedProject(){
+ const token=new URLSearchParams(location.hash.slice(1)).get('share');if(token){try{$('busy').hidden=false;$('busy').textContent='Перевірка доступу…';const data=await accessProject('resolve',{token});await downloadPrivate(data,data.name,token);}catch(e){$('busy').hidden=true;error(e.message);}return;}
+ if(new URLSearchParams(location.search).has('project'))error('Це старе публічне посилання. Попросіть власника створити новий QR у приватному кабінеті.');
+}
+
+
+
+const moduleDimensions=new THREE.Group();moduleDimensions.name='ModuleDimensions';scene.add(moduleDimensions);
+
+function dimensionTextAngle(dx,dy){let angle=Math.atan2(dy,dx);if(angle>Math.PI/2)angle-=Math.PI;if(angle<-Math.PI/2)angle+=Math.PI;return angle;}
+function updateDimensionLabelAngles(){
+ if(!activeModule)return;camera.updateMatrixWorld();const viewport=$('viewport');let changed=false;
+ for(const label of moduleDimensions.children){if(!label.isSprite)continue;const a=label.userData.dimensionStart.clone().project(camera),b=label.userData.dimensionEnd.clone().project(camera);const dx=(b.x-a.x)*viewport.clientWidth,dy=(b.y-a.y)*viewport.clientHeight;
+  if(!Number.isFinite(dx)||!Number.isFinite(dy)||Math.hypot(dx,dy)<2)continue;
+  const angle=dimensionTextAngle(dx,dy);if(Math.abs(label.material.rotation-angle)>0.00001){label.material.rotation=angle;changed=true;}
+ }
+ if(changed)invalidate();
+}
+
+function clearModuleDimensions(){for(const child of [...moduleDimensions.children]){moduleDimensions.remove(child);child.geometry?.dispose();for(const mat of [].concat(child.material||[])){mat.map?.dispose();mat.dispose();}}}
+function drawModuleDimensions(mod){
+ clearModuleDimensions();const box=mod.dimensionBox,scale=mod.dimensionScale,axes=mod.dimensionAxes,frame=mod.owner.matrixWorld;
+ const lo=box.min.toArray(),hi=box.max.toArray();const extent=Math.max(...mod.size)/1000,offset=Math.max(extent*.09,.035),textHeight=Math.max(extent*.04,.018);
+ const world=a=>new THREE.Vector3(...a).applyMatrix4(frame);const positions=[];
+ function segment(a,b){positions.push(...a.toArray(),...b.toArray());}
+ axes.forEach((axis,i)=>{
+  const a=lo.slice(),b=lo.slice();b[axis]=hi[axis];
+  // Put height behind the facade; infer front from explicitly named facade panels.
+  let shiftSign=-1;const shiftAxis=axes[(i+1)%3];
+  if(i===1){const depth=axes[2];const facades=mod.panels.filter(p=>/фасад|facade|front/i.test(p.name));let backHigh=true;
+   if(facades.length){const faceBox=localBounds(mod.owner,facades.flatMap(p=>p.meshes));const faceCenter=faceBox.getCenter(new THREE.Vector3()).toArray()[depth];backHigh=faceCenter<(lo[depth]+hi[depth])/2;}
+   a[depth]=b[depth]=backHigh?hi[depth]:lo[depth];shiftSign=backHigh?1:-1;
+  }
+  const start=world(a),end=world(b);a[shiftAxis]+=shiftSign*offset/scale[shiftAxis];b[shiftAxis]+=shiftSign*offset/scale[shiftAxis];
+  const u=world(a),v=world(b);segment(start,u);segment(end,v);segment(u,v);
+  const along=v.clone().sub(u).normalize();const outward=u.clone().sub(start).normalize();const tick=offset*.15;
+  for(const point of [u,v]){const delta=along.clone().add(outward).normalize().multiplyScalar(tick);segment(point.clone().sub(delta),point.clone().add(delta));}
+  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=80;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,256,80);ctx.fillStyle='#263b30';ctx.font='600 54px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(mod.size[i]),128,40);
+  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const label=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthTest:false,depthWrite:false,transparent:true,toneMapped:false}));label.position.copy(u).lerp(v,.5).addScaledVector(outward,textHeight*.8);label.scale.set(textHeight*3.2,textHeight,1);label.renderOrder=101;label.userData.dimensionStart=u.clone();label.userData.dimensionEnd=v.clone();moduleDimensions.add(label);
+ });
+ const lines=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(positions,3)),new THREE.LineBasicMaterial({color:0x53685b,depthTest:false,depthWrite:false,toneMapped:false}));lines.renderOrder=100;moduleDimensions.add(lines);
+ // Reserve some space around the module for the dimension annotations.
+ camera.position.sub(controls.target).multiplyScalar(1.2).add(controls.target);controls.update();invalidate();
+}
+
+function findModuleOwner(o){for(let a=o;a;a=a.parent)if(/^(?:MOD(?:[_ .-]|\d)|Модуль(?:[_ .-]|\d))/i.test(a.userData.sourceName||a.name||''))return a;return null;}
+const moduleSwitch=document.createElement('button');moduleSwitch.id='module-switch';moduleSwitch.textContent='Режим модулів';moduleSwitch.setAttribute('aria-pressed','false');$('tools').querySelector('h2').after(moduleSwitch);
+const moduleBar=document.createElement('div');moduleBar.id='module-bar';moduleBar.hidden=true;const moduleInfo=document.createElement('span');moduleInfo.id='module-info';const moduleBack=document.createElement('button');moduleBack.textContent='До кухні';moduleBack.onclick=leaveModule;moduleBar.append(moduleInfo,moduleBack);document.body.append(moduleBar);
+function resetModuleState(){clearModuleDimensions();moduleSnapshot=null;activeModule=null;moduleMode=false;modules=[];}
+function discoverModules(){modules=[];for(const p of parts){const owner=findModuleOwner(p.owner);if(!owner){p.module=null;continue;}let mod=modules.find(m=>m.owner===owner);if(!mod){mod={owner,name:displayName(owner),panels:[]};modules.push(mod);}mod.panels.push(p);p.module=mod;}for(const m of modules){const box=localBounds(m.owner,m.panels.flatMap(p=>p.meshes));const raw=box.getSize(new THREE.Vector3()).toArray(),e=m.owner.matrixWorld.elements;const scale=[Math.hypot(e[0],e[1],e[2]),Math.hypot(e[4],e[5],e[6]),Math.hypot(e[8],e[9],e[10])];const up=[Math.abs(e[1]/scale[0]),Math.abs(e[5]/scale[1]),Math.abs(e[9]/scale[2])];const height=up.indexOf(Math.max(...up)),horizontal=[0,1,2].filter(i=>i!==height);m.dimensionBox=box;m.dimensionScale=scale;m.dimensionAxes=[horizontal[0],height,horizontal[1]];m.size=m.dimensionAxes.map(i=>Math.round(raw[i]*scale[i]*1000));}}
+function belongsToModule(o,mod){return o.userData.moduleOwner===mod.owner||findModuleOwner(o)===mod.owner;}
+function updateModuleUI(){if(typeof moduleSwitch==='undefined')return;moduleSwitch.disabled=!modules.length;moduleSwitch.textContent=moduleMode?'Модулі: увімкнено':'Режим модулів'+(modules.length?' ('+modules.length+')':' — груп не знайдено');moduleSwitch.setAttribute('aria-pressed',String(moduleMode));moduleBar.hidden=!moduleMode;moduleBack.hidden=!activeModule;
+ if(activeModule){moduleInfo.textContent=activeModule.name;moduleInfo.title='Габарити всіх панелей модуля, включно з фасадами, без фурнітури';for(const p of parts)if(p.module!==activeModule)setHidden(p,true);root?.traverse(o=>{if((o.isMesh||o.isLine||o.isPoints)&&!belongsToModule(o,activeModule))o.visible=false;});}else moduleInfo.textContent='Натисніть на панель потрібного модуля';}
+moduleSwitch.onclick=()=>{if(activeModule)leaveModule();moduleMode=!moduleMode;updateModuleUI();invalidate();};
+function enterModule(mod){if(!root||activeModule)return;const visibility=new Map();root.traverse(o=>visibility.set(o,o.visible));moduleSnapshot={visibility,hidden:parts.map(p=>p.hidden),selected:[...selection],camera:camera.position.clone(),target:controls.target.clone(),near:camera.near,far:camera.far,min:controls.minDistance,max:controls.maxDistance,extras:new Map(isolatedExtras),isolated};choose(null);activeModule=mod;moduleMode=true;for(const p of parts)setHidden(p,p.module!==mod);refresh();fit();drawModuleDimensions(mod);}
+function leaveModule(){if(!moduleSnapshot)return;clearModuleDimensions();choose(null);const snapshot=moduleSnapshot;activeModule=null;moduleSnapshot=null;parts.forEach((p,i)=>p.hidden=snapshot.hidden[i]);for(const [o,v] of snapshot.visibility)o.visible=v;isolatedExtras.clear();for(const [o,v] of snapshot.extras)isolatedExtras.set(o,v);isolated=snapshot.isolated;camera.position.copy(snapshot.camera);controls.target.copy(snapshot.target);camera.near=snapshot.near;camera.far=snapshot.far;controls.minDistance=snapshot.min;controls.maxDistance=snapshot.max;camera.updateProjectionMatrix();controls.update();for(const p of snapshot.selected)choose(p,true);refresh();invalidate();}
+const restorePanels=$('restore').onclick;$('restore').onclick=()=>{restorePanels();updateModuleUI();invalidate();};
+const showEverything=$('all').onclick;$('all').onclick=()=>{if(activeModule)leaveModule();moduleMode=false;showEverything();};
+$('edges').addEventListener('change',()=>{updateModuleUI();invalidate();});$('extra-lines').addEventListener('change',()=>{updateModuleUI();invalidate();});
+
+
+const panelSearch=document.createElement('input');panelSearch.type='search';panelSearch.id='panel-search';panelSearch.placeholder='Номер або назва панелі';panelSearch.setAttribute('aria-label','Пошук панелі за номером або назвою');panelSearch.autocomplete='off';panelSearch.style.cssText='width:100%;min-height:38px;padding:8px;border:1px solid #daddd6;border-radius:6px;margin:5px 0;font-size:16px';
+const panelSearchCount=document.createElement('div');panelSearchCount.className='muted';panelSearchCount.setAttribute('role','status');$('parts').before(panelSearch,panelSearchCount);
+function matchesPanelSearch(name,query){const q=query.trim().toLocaleLowerCase('uk');if(!q)return true;if(/^\d+$/.test(q)){const number=name.match(/^_*\s*(\d+)(?=[.\s_]|$)/);return !!number&&Number(number[1])===Number(q);}return name.toLocaleLowerCase('uk').includes(q);}
+function filterPanelOptions(){panelSearch.disabled=!parts.length;const query=panelSearch.value.trim(),matching=parts.filter(p=>matchesPanelSearch(p.name,query));const options=[new Option(matching.length?'Виберіть деталь…':'Нічого не знайдено','')];for(const p of matching){const option=new Option(p.name+(p.hidden?' · приховано':''),String(p.id));option.disabled=p.hidden;options.push(option);}$('parts').replaceChildren(...options);$('parts').value=selected&&matching.includes(selected)?String(selected.id):'';panelSearchCount.textContent=query?'Знайдено: '+matching.length:'';panelSearchCount.hidden=!query;}
+panelSearch.oninput=filterPanelOptions;
+panelSearch.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();const found=parts.filter(p=>!p.hidden&&matchesPanelSearch(p.name,panelSearch.value));if(found.length===1){if(moduleMode&&!activeModule&&found[0].module)enterModule(found[0].module);else choose(found[0],multiToggle.checked);panelSearch.blur();}}};
+
+refresh();resize();openLinkedProject();
+
+
+}catch(e){console.error(e);$('status').textContent='3D-модуль недоступний';error('Не вдалося запустити 3D. Перевірте інтернет і підтримку WebGL 2 у браузері. '+e.message);}
+</script></body></html>
+
