@@ -28,6 +28,17 @@ nav button.active{background:#e87527;border-color:#e87527;box-shadow:none}button
 .date-badge{display:inline-flex;align-items:baseline;gap:3px;background:#e5e9e1;border-radius:6px;padding:4px 7px;margin:1px 0 5px;white-space:nowrap;color:#414a3e}.date-badge .num,.date-badge .day-name{font-weight:750;color:inherit;font-size:12px}.day.today .date-badge{background:#e87527;color:white}.day.today .date-badge .num{background:none;border-radius:0;padding:0}.day.out .date-badge{background:#e9ece6;color:#91988b}@media(max-width:650px){.date-badge{gap:1px;padding:3px 4px}.date-badge .num,.date-badge .day-name{font-size:10px}}
 
 .event.deadline{background:#d96018;color:#fff;border:1px solid #bd4f10;border-left:5px solid #8d390c;font-weight:750;font-size:12px;padding:8px 6px;box-shadow:0 2px 5px #ae4c1726;margin-top:8px}.event.deadline:hover{background:#bd5012;color:#fff}.agreed-date{display:inline-block;background:#fff0dc;border:1px solid #edb47c;color:#94400c;font-size:13px;font-weight:750;padding:6px 9px;border-radius:7px}.agreed-date.unset{background:#f0f2ed;border-color:#d8ddd5;color:#77806f;font-weight:400}@media(max-width:650px){.event.deadline{font-size:10px;padding:6px 4px}.agreed-date{font-size:12px}}
+
+/* Compact phone layout */
+@media(max-width:650px){
+header{padding:8px 10px;gap:8px}header h1{font-size:19px}header small{display:none}header #new{font-size:12px;padding:8px 10px}
+header+div.row{padding:5px 10px!important;gap:5px;flex-wrap:nowrap;font-size:10px}#syncStatus{flex:1;min-width:0}#syncNow,#logout{font-size:10px;padding:6px;white-space:nowrap}
+main{padding:10px 6px}nav{gap:5px;margin-bottom:9px}nav button{font-size:12px;padding:8px 5px}
+.stats{gap:5px;margin-bottom:10px}.stat{padding:6px;min-height:39px;font-size:9px;border-radius:8px}.stat b{font-size:19px}
+.tools{margin-bottom:7px;gap:5px}.tools>.row{gap:5px}.tools h2{font-size:16px}.tools .row button{padding:6px 9px;font-size:12px}
+.legend{margin:7px 0;gap:5px;font-size:10px}.legend span{padding:3px 6px}.legend small{display:none}
+.weekdays{padding:7px 0;font-size:11px}.day{min-height:134px;padding:3px}.calendar-lane{min-height:50px}.lane-title{font-size:9px;overflow-wrap:anywhere;line-height:1.15}.calendar-lane.partner{margin-top:4px;padding-top:5px}.event{font-size:10px;line-height:1.3}.date-badge{padding:3px 2px}.date-badge .num,.date-badge .day-name{font-size:9px}
+}
 </style>
 <header><div><h1>Майстер<span style="color:#368367">План</span></h1><small>Замовлення під контролем</small></div><button class="primary" id="new">＋ Замовлення</button></header>
 <div style="padding:8px 5%;background:#fff7ed" class="row"><span id="syncStatus">Підключення…</span><button id="syncNow">Оновити дані</button><button id="logout">Вийти</button></div><main><nav><button data-view="calendar" class="active">Календар</button><button data-view="orders">Замовлення</button><button data-view="today">Сьогодні</button></nav><div class="stats" id="stats"></div><section id="content"></section><div class="notice">Онлайн-версія · Зміни зберігаються у спільній базі після підтвердження сервера. Без інтернету редагування недоступне. Для резервної копії натисни «Експорт».</div><div class="row" style="margin-top:12px"><button id="export">↓ Експорт даних</button><button id="import">↑ Відновити копію</button><button id="demo">Додати приклади</button><input type="file" id="file" accept="application/json,.json" hidden></div></main>
