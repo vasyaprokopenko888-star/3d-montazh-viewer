@@ -653,13 +653,14 @@ function drawWardrobeDimensions(){
  if(facade){const extent=facade.box.getSize(new THREE.Vector3()).toArray();let best=-1;for(let axis=0;axis<3;axis++){const v=new THREE.Vector3().setComponent(axis,1).transformDirection(facade.owner.matrixWorld);const score=extent[axis]*Math.hypot(...facade.owner.matrixWorld.elements.slice(axis*4,axis*4+3))*Math.hypot(v.x,v.z);if(score>best){best=score;width.copy(v);}}width.y=0;width.normalize();}
  if(width.x<-.0001||(Math.abs(width.x)<.0001&&width.z<0))width.negate();const depth=new THREE.Vector3(-width.z,0,width.x);
  const panels=visible.map(p=>{const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(const x of [p.box.min.x,p.box.max.x])for(const y of [p.box.min.y,p.box.max.y])for(const z of [p.box.min.z,p.box.max.z]){const v=new THREE.Vector3(x,y,z).applyMatrix4(p.owner.matrixWorld);const a=[v.dot(width),v.y,v.dot(depth)];a.forEach((n,i)=>{lo[i]=Math.min(lo[i],n);hi[i]=Math.max(hi[i],n);});}return {name:p.name,lo,hi,p};});
+ const groups=[];const pending=new Set(panels);while(pending.size){const group=[pending.values().next().value];pending.delete(group[0]);for(let i=0;i<group.length;i++)for(const candidate of [...pending]){if([0,1,2].every(axis=>candidate.lo[axis]<=group[i].hi[axis]+.06&&candidate.hi[axis]>=group[i].lo[axis]-.06)){pending.delete(candidate);group.push(candidate)}}groups.push(group)}
+ for(const panels of groups){
  const plan=planWardrobe(panels),lo=[0,1,2].map(i=>Math.min(...panels.map(p=>p.lo[i]))),hi=[0,1,2].map(i=>Math.max(...panels.map(p=>p.hi[i])));const face=facade?panels.find(p=>p.p===facade):null;const frontLow=face?(face.lo[2]+face.hi[2])/2<(lo[2]+hi[2])/2:camera.position.dot(depth)<(lo[2]+hi[2])/2;const sign=frontLow?-1:1,front=frontLow?lo[2]-.025:hi[2]+.025;const positions=[];
  const world=a=>width.clone().multiplyScalar(a[0]).add(new THREE.Vector3(0,a[1],0)).addScaledVector(depth,a[2]);const segment=(a,b)=>positions.push(...a.toArray(),...b.toArray());
  function dimension(a,b,total=false){const u=world(a),v=world(b),length=u.distanceTo(v);if(length<.025)return;segment(u,v);const vertical=Math.abs(a[1]-b[1])>.001,tick=vertical?width.clone().multiplyScalar(.018):new THREE.Vector3(0,.018,0);for(const p of [u,v])segment(p.clone().sub(tick),p.clone().add(tick));const canvas=document.createElement('canvas');canvas.width=512;canvas.height=112;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,512,112);ctx.fillStyle=total?'#a34413':'#183a31';ctx.font='600 65px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(tr(Math.round(length*1000)+' мм'),256,56);const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false,depthWrite:false,toneMapped:false}));sprite.position.copy(u).lerp(v,.5);if(vertical)sprite.position.addScaledVector(width,.055);else sprite.position.y+=.045;const height=total?.065:.045;sprite.scale.set(height*512/112,height,1);sprite.renderOrder=122;sprite.userData.dimensionStart=u;sprite.userData.dimensionEnd=v;wardrobeDimensions.add(sprite);}
  for(const span of plan.topSpans){
- const topY=hi[1]+.16;dimension([span.left,topY,front],[span.right,topY,front]);
- const roofFront=frontLow?span.roof.lo[2]:span.roof.hi[2];
- for(const edge of [span.left,span.right]){segment(world([edge,span.roof.hi[1],roofFront]),world([edge,span.roof.hi[1],front]));segment(world([edge,span.roof.hi[1],front]),world([edge,topY+.025,front]));}
+ const topY=span.roof.hi[1]+.16,roofFront=frontLow?span.roof.lo[2]:span.roof.hi[2];dimension([span.left,topY,roofFront],[span.right,topY,roofFront]);
+ for(const edge of [span.left,span.right])segment(world([edge,span.roof.hi[1],roofFront]),world([edge,topY+.025,roofFront]));
  }
  for(const gap of plan.clearances){
   const x=(gap.left+gap.right)/2;
@@ -669,7 +670,8 @@ function drawWardrobeDimensions(){
   segment(world([x,gap.lo,lowerFront]),world([x,gap.lo,shelfFront]));segment(world([x,gap.hi,upperFront]),world([x,gap.hi,shelfFront]));
  }
  dimension([lo[0],hi[1]+.36,front],[hi[0],hi[1]+.36,front],true);dimension([lo[0]-.22,lo[1],front],[lo[0]-.22,hi[1],front],true);dimension([hi[0]+.18,lo[1],lo[2]],[hi[0]+.18,lo[1],hi[2]],true);
- const lines=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(positions,3)),new THREE.LineBasicMaterial({color:0x315c4c,depthTest:false,depthWrite:false,toneMapped:false}));lines.renderOrder=121;wardrobeDimensions.add(lines);wardrobeSwitch.title='Секцій: '+plan.sections.length+' · проміжків: '+plan.clearances.length;invalidate();
+ const lines=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(positions,3)),new THREE.LineBasicMaterial({color:0x315c4c,depthTest:false,depthWrite:false,toneMapped:false}));lines.renderOrder=121;wardrobeDimensions.add(lines);wardrobeSwitch.title='Корпусів: '+groups.length;
+ }invalidate();
 }
 
 const restorePanels=$('restore').onclick;$('restore').onclick=()=>{restorePanels();updateModuleUI();invalidate();};
