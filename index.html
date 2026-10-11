@@ -745,7 +745,7 @@ function closePrintPreview(){document.body.classList.remove('viewer-print-ready'
 $('print-close').onclick=closePrintPreview;$('print-confirm').onclick=()=>window.print();
 printPreview.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closePrintPreview();}if(e.key==='Tab'){const first=$('print-confirm'),last=$('print-close');if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 function drawPrintMeasurements(ctx,width,height){
- for(const m of measurements){if(!m.group.visible||m.label.style.display==='none')continue;const mid=m.points[0].clone().lerp(m.points[1],.5).project(camera);if(Math.abs(mid.z)>1)continue;const a=m.points[0].clone().project(camera),b=m.points[1].clone().project(camera);let angle=Math.atan2(-(b.y-a.y)*height,(b.x-a.x)*width);if(angle>Math.PI/2)angle-=Math.PI;if(angle< -Math.PI/2)angle+=Math.PI;ctx.save();ctx.translate((mid.x+1)*width/2,(1-mid.y)*height/2);ctx.rotate(angle);ctx.fillStyle='#b64c08';ctx.font='600 '+Math.round(13*width/renderer.domElement.clientWidth)+'px system-ui';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(tr(m.label.textContent+' мм'),0,-6*width/renderer.domElement.clientWidth);ctx.restore();}
+ for(const m of measurements){if(!m.group.visible||m.label.style.display==='none')continue;const mid=m.points[0].clone().lerp(m.points[1],.5).project(camera);if(Math.abs(mid.z)>1)continue;const a=m.points[0].clone().project(camera),b=m.points[1].clone().project(camera);let angle=Math.atan2(-(b.y-a.y)*height,(b.x-a.x)*width);if(angle>Math.PI/2)angle-=Math.PI;if(angle< -Math.PI/2)angle+=Math.PI;ctx.save();ctx.translate((mid.x+1)*width/2,(1-mid.y)*height/2);ctx.rotate(angle);ctx.fillStyle='#202820';ctx.font='700 '+Math.max(24,Math.round(18*width/renderer.domElement.clientWidth))+'px system-ui';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(tr(m.label.textContent+' мм'),0,-6*width/renderer.domElement.clientWidth);ctx.restore();}
 }
 function printCropBounds(data,width,height){
  let left=width,top=height,right=-1,bottom=-1;
@@ -756,15 +756,21 @@ function cropPrintCanvas(canvas){const ctx=canvas.getContext('2d'),bounds=printC
 function updatePrintPageLayout(image){const portrait=image.naturalHeight>image.naturalWidth;printPageLayout.textContent='@media print{@page{size:A4 '+(portrait?'portrait':'landscape')+';margin:6mm}#print-image{width:100%;height:'+(portrait?'269':'182')+'mm;max-height:none;object-fit:contain}}';}
 const printPageLayout=document.createElement('style');document.head.append(printPageLayout);
 
+function drawPrintDimensionLabels(ctx,w,h,labels){
+ const font=Math.max(24,Math.round(Math.max(w,h)/105));
+ for(const sprite of labels){const start=sprite.userData.dimensionStart,end=sprite.userData.dimensionEnd;if(!start||!end)continue;const mid=start.clone().lerp(end,.5).project(camera);if(Math.abs(mid.z)>1)continue;const a=start.clone().project(camera),b=end.clone().project(camera);let angle=Math.atan2(-(b.y-a.y)*h,(b.x-a.x)*w);if(angle>Math.PI/2)angle-=Math.PI;if(angle< -Math.PI/2)angle+=Math.PI;ctx.save();ctx.translate((mid.x+1)*w/2,(1-mid.y)*h/2);ctx.rotate(angle);ctx.font='700 '+font+'px system-ui';ctx.textAlign='center';ctx.textBaseline='bottom';const text=Math.round(start.distanceTo(end)*1000)+' '+tr('мм');ctx.lineWidth=5;ctx.strokeStyle='#ffffff';ctx.strokeText(text,0,-font*.3);ctx.fillStyle='#202820';ctx.fillText(text,0,-font*.3);ctx.restore();}
+}
 async function capturePrintImage(){
  const background=scene.background,enabled=controls.enabled;controls.enabled=false;
+ const labels=[],materials=[];for(const group of [moduleDimensions,kitchenDimensions,wardrobeDimensions]){if(!group.visible)continue;group.traverse(o=>{if(o.isSprite&&o.visible&&o.userData.dimensionStart){labels.push(o);o.visible=false}else if(o.isLine&&o.material?.color){materials.push([o.material,o.material.color.clone()]);o.material.color.set('#293b31')}})}
  try{
-  scene.background=new THREE.Color('#ffffff');motionOpaque=false;syncPanelOpacity();invalidate();
+  scene.background=new THREE.Color('#ffffff');motionOpaque=false;syncPanelOpacity();
+  const el=$('viewport'),maxSide=Math.min(3300,renderer.capabilities.maxTextureSize),ratio=Math.min(maxSide/Math.max(el.clientWidth,el.clientHeight),Math.sqrt(8500000/(el.clientWidth*el.clientHeight)));
+  renderer.setPixelRatio(ratio);renderer.setSize(el.clientWidth,el.clientHeight);composer.setPixelRatio(ratio);composer.setSize(el.clientWidth,el.clientHeight);invalidate();
   const started=performance.now();while(dirty&&performance.now()-started<15000)await new Promise(resolve=>requestAnimationFrame(resolve));
   updateDimensionLabelAngles();updateMeasureView();taa.accumulate=$('smooth').checked;taa.holdUntilSamples=0;
-  // Render and copy in the same task: WebGL drawing buffers may be cleared between frames.
-  composer.render();const canvas=document.createElement('canvas');canvas.width=renderer.domElement.width;canvas.height=renderer.domElement.height;const ctx=canvas.getContext('2d');ctx.drawImage(renderer.domElement,0,0);drawPrintMeasurements(ctx,canvas.width,canvas.height);return cropPrintCanvas(canvas).toDataURL('image/png');
- }finally{scene.background=background;controls.enabled=enabled;invalidate();}
+  composer.render();const canvas=document.createElement('canvas');canvas.width=renderer.domElement.width;canvas.height=renderer.domElement.height;const ctx=canvas.getContext('2d');ctx.drawImage(renderer.domElement,0,0);drawPrintMeasurements(ctx,canvas.width,canvas.height);drawPrintDimensionLabels(ctx,canvas.width,canvas.height,labels);return cropPrintCanvas(canvas).toDataURL('image/png');
+ }finally{for(const label of labels)label.visible=true;for(const [mat,color] of materials)mat.color.copy(color);scene.background=background;controls.enabled=enabled;resize();invalidate();}
 }
 async function preparePrint(){
  if(!root||loading||printPreparing)return;printPreparing=true;updatePrintButton();const oldTitle=printButton.title;printButton.title='Підготовка друку…';
