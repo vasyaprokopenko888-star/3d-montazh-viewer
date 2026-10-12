@@ -50,6 +50,8 @@ main{padding:10px 6px}nav{gap:5px;margin-bottom:9px}nav button{font-size:12px;pa
 
 
 .cost-table input[type="number"]{appearance:textfield;-moz-appearance:textfield}.cost-table input[type="number"]::-webkit-inner-spin-button,.cost-table input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+
+.cost-table td{padding:4px 5px}.cost-table input{min-height:0;height:32px;padding:4px;line-height:1.2}.cost-table input[data-cost-field="name"][readonly]{height:28px;padding-bottom:1px}.cost-table input[data-cost-field="detail"]{height:28px;padding-top:2px}.cost-table th{padding:7px 10px}#costCurrency{margin-top:3px;padding:5px;min-height:0;height:34px}
 </style>
 <header><div><h1>Майстер<span style="color:#368367">План</span></h1><small>Замовлення під контролем</small></div><button class="primary" id="new">＋ Замовлення</button></header>
 <div style="padding:8px 5%;background:#fff7ed" class="row"><span id="syncStatus">Підключення…</span><button id="syncNow">Оновити дані</button><button id="logout">Вийти</button></div><main><nav><button data-view="calendar" class="active">Календар</button><button data-view="orders">Замовлення</button><button data-view="today">Сьогодні</button></nav><div class="stats" id="stats"></div><section id="content"></section><div class="notice">Онлайн-версія · Зміни зберігаються у спільній базі після підтвердження сервера. Без інтернету редагування недоступне. Для резервної копії натисни «Експорт».</div><div class="row" style="margin-top:12px"><button id="export">↓ Експорт даних</button><button id="import">↑ Відновити копію</button><button id="demo">Додати приклади</button><input type="file" id="file" accept="application/json,.json" hidden></div></main>
