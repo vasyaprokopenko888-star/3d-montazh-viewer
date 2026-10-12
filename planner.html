@@ -175,7 +175,14 @@ $('#passwordGate').addEventListener('cancel',e=>e.preventDefault());
 $('#setPasswordForm').onsubmit=async e=>{e.preventDefault();const password=$('#newCloudPassword').value;if(password.length<8||password!==$('#repeatCloudPassword').value){$('#passwordError').textContent='Паролі мають збігатися й містити щонайменше 8 символів.';return}try{await cloudRequest('/auth/v1/user',{method:'PUT',body:JSON.stringify({password})});$('#newCloudPassword').value='';$('#repeatCloudPassword').value='';await loadCloud();$('#passwordGate').close()}catch(err){$('#passwordError').textContent=err.message}};
 $('#resetCloudPassword').onclick=async()=>{const email=$('#cloudEmail').value.trim();if(!email){$('#cloudError').textContent='Вкажи свою email-адресу.';return}try{cloudConfig=cloudConfig||{url:$('#cloudUrl').value,key:$('#cloudKey').value,workspace:$('#cloudWorkspace').value};await cloudRequest('/auth/v1/recover?redirect_to='+encodeURIComponent(location.origin+location.pathname),{method:'POST',body:JSON.stringify({email})},false);$('#cloudError').textContent='Якщо адреса зареєстрована, лист надійде на пошту. Відкрий найновіший лист.'}catch(err){$('#cloudError').textContent=err.message}};
 async function bootCloud(){try{cloudConfig=JSON.parse(localStorage.getItem('meisterplan.cloud.config')||'null')||{url:$('#cloudUrl').value,key:$('#cloudKey').value,workspace:$('#cloudWorkspace').value};cloudSession=JSON.parse(localStorage.getItem('meisterplan.cloud.session')||'null');const incoming=invitationSession(location.hash);if(incoming){history.replaceState(null,'',location.pathname+location.search);rememberSession(incoming);if(['invite','recovery','signup'].includes(incoming.type)){$('#passwordGate').showModal();return}}if(cloudConfig){$('#cloudUrl').value=cloudConfig.url;$('#cloudKey').value=cloudConfig.key;$('#cloudWorkspace').value=cloudConfig.workspace}$('#cloudSettings').open=!cloudConfig;if(cloudConfig&&cloudSession&&await loadCloud())return;showCloudGate()}catch(e){showCloudGate(e.message)}}
-setInterval(()=>{if(cloudSession&&!document.querySelector('dialog[open]')&&!document.hidden)loadCloud().catch(()=>{})},20000);
+let cloudResumeTimer;
+function resumeCloudSync(){clearTimeout(cloudResumeTimer);cloudResumeTimer=setTimeout(()=>{if(cloudSession&&!document.hidden&&!document.querySelector('dialog[open]')&&!cloudWriting&&!cloudLoading)loadCloud().catch(()=>{})},150)}
+window.addEventListener('focus',resumeCloudSync);
+window.addEventListener('pageshow',resumeCloudSync);
+window.addEventListener('online',resumeCloudSync);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)resumeCloudSync()});
+document.querySelectorAll('dialog').forEach(dialog=>dialog.addEventListener('close',resumeCloudSync));
+setInterval(resumeCloudSync,20000);
 
 render();bootCloud();
 </script></html>
