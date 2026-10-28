@@ -1,1 +1,0 @@
-{"name": "МайстерПлан", "short_name": "МайстерПлан", "lang": "uk", "start_url": "./planner.html", "scope": "./", "display": "standalone", "background_color": "#eef0eb", "theme_color": "#e87527", "icons": [{"src": "planner-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]}
