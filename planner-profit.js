@@ -20,11 +20,18 @@ if(typeof module!=='undefined')module.exports=api;
 if(typeof document==='undefined')return;
 const fmt=new Intl.NumberFormat('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2});
 const money=n=>fmt.format(Object.is(n,-0)?0:n)+' Kč',percent=n=>n===null?'—':fmt.format(n)+'%';
-api.mount=function(){
+const quickKey='meisterplan.profit.quick.v1';
+api.renderQuick=function(){
+ const content=document.getElementById('content');content.innerHTML='<div id="mp-quick-host" style="max-width:760px;margin:auto"><h2>Калькулятор прибутку</h2><p class="hint">Швидкий розрахунок у Kč. Значення зберігаються на цьому пристрої окремо від замовлень.</p></div>';
+ api.mount({quick:true,host:document.getElementById('mp-quick-host')});
+};
+api.mount=function(options={}){
  document.getElementById('mp-profit')?.remove();
- let state=normalize(costDraft.profitCalculator||{});
+ const store=options.quick?{}:costDraft;
+ if(options.quick){try{store.profitCalculator=JSON.parse(localStorage.getItem(quickKey)||'null')}catch{}}
+ let state=normalize(store.profitCalculator||{});
  let seedNote='';
- if(!costDraft.profitCalculator){
+ if(!options.quick&&!store.profitCalculator){
   const summary=costSummary(costDraft),rate=costDraft.currency==='CZK'?1:Number(costDraft.rates[costDraft.currency]);
   if(!summary.missing&&!summary.unknown&&rate>0){state.cost=summary.total*rate;state.price=number(costDraft.agreedPrice)*rate;seedNote='Початкові суми взято з таблиці та погодженої ціни. Далі редагуються окремо.'}
   else seedNote='Введіть суми у Kč: у таблиці бракує даних або курсу для початкового заповнення.';
@@ -32,7 +39,7 @@ api.mount=function(){
  if(!document.getElementById('mp-profit-style')){
   const style=document.createElement('style');style.id='mp-profit-style';style.textContent=`
 #mp-profit{padding:14px;background:#f3f7fb;border:1px solid #d6e0ed;border-radius:14px;margin:8px 0 18px;color:#172e40}
-#mp-profit h3{margin:0 0 10px}#mp-profit .mp-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}
+#mp-profit>.mp-body{margin-top:10px}#mp-profit>summary{padding:2px 0;font-size:16px}#mp-profit h3{margin:0 0 10px}#mp-profit .mp-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}
 #mp-profit label{display:flex;flex-direction:column;gap:4px;font-size:13px;min-width:0}#mp-profit input,#mp-profit select{width:100%;min-width:0;min-height:44px;padding:9px;font-size:16px;border:1px solid #bdccdd;border-radius:8px;background:white;color:#172e40}
 #mp-profit .mp-cost-head{display:flex;justify-content:space-between;align-items:center;gap:4px}#mp-profit .mp-cost-head select{width:66px;min-height:28px;padding:2px;font-size:13px}
 #mp-profit .mp-tax{display:flex;flex-direction:row;align-items:center;gap:8px;margin:10px 0}#mp-profit input[type=checkbox]{width:22px;min-height:22px;height:22px;accent-color:#1266d5}
@@ -42,17 +49,17 @@ api.mount=function(){
 @media(max-width:400px){#mp-profit{padding:10px}#mp-profit .mp-hero strong{font-size:21px}#mp-profit dl>div{font-size:12px;gap:6px}}
 `;document.head.append(style);
  }
- const panel=document.createElement('section');panel.id='mp-profit';panel.setAttribute('aria-label','Калькулятор прибутку');
+ const panel=document.createElement('details');panel.open=options.quick===true;panel.id='mp-profit';panel.setAttribute('aria-label','Калькулятор прибутку');
  const field=(name,label)=>`<label>${label}<input data-mp="${name}" type="number" inputmode="decimal" min="0" step="any" ${name==='discount'?'max="100"':''}></label>`;
- panel.innerHTML=`<h3>Прибуток замовлення · Kč</h3><div class="mp-fields">${field('price','Ціна з DPH, Kč')}<label><span class="mp-cost-head">Собівартість<select data-mp="mode" aria-label="Одиниця собівартості"><option value="czk">Kč</option><option value="percent">%</option></select></span><input data-mp="cost" aria-label="Початкова собівартість" type="number" inputmode="decimal" min="0" step="any"></label>${field('extra','Непередбачені, Kč')}${field('discount','Знижка, %')}</div><label class="mp-tax"><input data-mp="tax" type="checkbox">Прогноз податку s.r.o. · 21%</label><div class="mp-hero"><span id="mp-net-label">Чистий прибуток</span><strong id="mp-net" role="status" aria-live="polite"></strong></div><div class="mp-metrics"><div><small>Рентабельність витрат</small><b id="mp-roi"></b></div><div><small>Маржа від продажу</small><b id="mp-margin"></b></div></div><small id="mp-loss"></small><small id="mp-validation" class="mp-warning mp-note" role="status"></small><details><summary>Деталі · DPH та розрахунок</summary><div class="mp-fields">${field('nonCost','Із собівартості без відрахування DPH, Kč')}${field('nonExtra','Із непередбачених без відрахування DPH, Kč')}</div><small class="mp-note">Це частини введених витрат, а не додаткові суми. Решта містить DPH 21% із повним правом відрахування.</small><dl id="mp-breakdown"></dl><small>Податок s.r.o. — спрощений прогноз. Фактичний річний податок залежить від загального податкового результату компанії. Втрата від знижки порівнюється з чистим прибутком без знижки; відсоток доступний лише за додатного базового прибутку.</small><small class="mp-note">${seedNote} Параметри зберігаються разом із замовленням; автоматична локальна чернетка — на цьому пристрої.</small></details>`;
- document.querySelector('#costDialog>.tools').after(panel);
+ panel.innerHTML=`<summary>Калькулятор прибутку · DPH і податки</summary><div class="mp-body"><div class="mp-fields">${field('price','Ціна з DPH, Kč')}<label><span class="mp-cost-head">Собівартість<select data-mp="mode" aria-label="Одиниця собівартості"><option value="czk">Kč</option><option value="percent">%</option></select></span><input data-mp="cost" aria-label="Початкова собівартість" type="number" inputmode="decimal" min="0" step="any"></label>${field('extra','Непередбачені, Kč')}${field('discount','Знижка, %')}</div><label class="mp-tax"><input data-mp="tax" type="checkbox">Податок s.r.o. за підсумками року · прогноз 21%</label><div class="mp-hero"><span id="mp-net-label">Чистий прибуток</span><strong id="mp-net" role="status" aria-live="polite"></strong></div><div class="mp-metrics"><div><small>Рентабельність витрат</small><b id="mp-roi"></b></div><div><small>Маржа від продажу</small><b id="mp-margin"></b></div></div><small id="mp-loss"></small><small id="mp-validation" class="mp-warning mp-note" role="status"></small><h3 style="margin-top:16px">Податкові виплати · розпис</h3><dl id="mp-breakdown"></dl><small>DPH до сплати та прогноз податку на прибуток показані окремо. Їхня сума — орієнтир для резерву коштів; ці суми вже враховано в чистому прибутку.</small><details><summary>Деталі · право на відрахування DPH</summary><div class="mp-fields">${field('nonCost','Із собівартості без відрахування DPH, Kč')}${field('nonExtra','Із непередбачених без відрахування DPH, Kč')}</div><small class="mp-note">Це частини введених витрат, а не додаткові суми. Решта містить DPH 21% із повним правом відрахування.</small><small>Податок s.r.o. — спрощений прогноз. Фактичний річний податок залежить від загального податкового результату компанії. Втрата від знижки порівнюється з чистим прибутком без знижки; відсоток доступний лише за додатного базового прибутку.</small><small class="mp-note">${seedNote} ${options.quick?"Швидкий розрахунок збережено лише на цьому пристрої.":"Параметри зберігаються разом із замовленням; автоматична локальна чернетка — на цьому пристрої."}</small></details></div>`;
+ if(options.host)options.host.append(panel);else document.querySelector('#costDialog>.tools').after(panel);
  const controls=[...panel.querySelectorAll('[data-mp]')];
  function fill(){for(const el of controls){const key=el.dataset.mp;if(el.type==='checkbox')el.checked=state[key];else el.value=state[key]}}
  function draw(){const r=calculate(state);panel.querySelector('#mp-net').textContent=money(r.net);panel.querySelector('.mp-hero').classList.toggle('mp-negative',r.net<0);panel.querySelector('#mp-net-label').textContent=state.tax?'Чистий прибуток':'Прибуток без податку';panel.querySelector('#mp-roi').textContent=percent(r.roi);panel.querySelector('#mp-margin').textContent=percent(r.margin);panel.querySelector('#mp-loss').textContent='Втрата через знижку: '+money(r.loss)+' · '+percent(r.lossPercent);
- const rows=[['Початкова ціна з DPH',r.price],['Знижка',r.discountAmount],['Продаж після знижки з DPH',r.sale],['Загальна собівартість',r.total],['DPH із продажу',r.outputVAT],['Вхідний DPH до відрахування',r.inputVAT],[r.vatPayable<0?'Перевищення вхідного DPH':'Розрахунковий DPH до сплати',Math.abs(r.vatPayable)],['Прибуток до податку',r.profit],['Прогнозований податок s.r.o.'+(state.tax?'':' · вимкнено'),r.tax],['Чистий прибуток',r.net]];
+ const rows=[['Початкова ціна з DPH',r.price],['Знижка клієнту',r.discountAmount],['Продаж після знижки з DPH',r.sale],['Собівартість + непередбачені з DPH',r.total],['DPH, отриманий від клієнта · 21%',r.outputVAT],['Відрахування DPH із собівартості',(r.cost-r.nonCost)*VAT],['Відрахування DPH із непередбачених',(state.extra-r.nonExtra)*VAT],['Разом DPH до відрахування',r.inputVAT],[r.vatPayable<0?'Перевищення вхідного DPH':'DPH до сплати після відрахування',Math.abs(r.vatPayable)],['Продаж без DPH',r.revenue],['Витрати після відрахування DPH',r.costs],['З них без права відрахування DPH',r.nonCost+r.nonExtra],['Прибуток до податку s.r.o.',r.profit],['База прогнозу податку · додатний прибуток',Math.max(0,r.profit)],['Податок s.r.o. за підсумками року · прогноз 21%'+(state.tax?'':' · вимкнено'),r.tax],['Орієнтир резерву: DPH до сплати + податок',Math.max(0,r.vatPayable)+r.tax],['Чистий прибуток після податків',r.net]];
  panel.querySelector('#mp-breakdown').innerHTML=rows.map(([label,value])=>`<div><dt>${label}</dt><dd>${money(value)}</dd></div>`).join('')+(r.vatPayable<0?'<div><small>Перевищення вхідного DPH не означає автоматичного повернення.</small></div>':'');
  }
- function commit(){costDraft.profitCalculator={...state};saveLocalDraft()}
+ function commit(){if(options.quick){try{localStorage.setItem(quickKey,JSON.stringify(state))}catch{panel.querySelector('#mp-validation').textContent='Не вдалося зберегти розрахунок на цьому пристрої.'}}else{store.profitCalculator={...state};saveLocalDraft()}}
  function change(e){const el=e.target,key=el.dataset.mp;if(!key)return;const warning=panel.querySelector('#mp-validation');warning.textContent='';
  if(key==='mode'){const next=switchMode(state,el.value);if(!next){el.value=state.mode;warning.textContent='За нульової ціни додатну собівартість неможливо виразити у %. Спочатку введіть ціну.';return}state=next;fill()}
  else if(key==='tax')state.tax=el.checked;
