@@ -31,7 +31,7 @@ nav button.active{background:#e87527;border-color:#e87527;box-shadow:none}button
 
 /* Compact phone layout */
 @media(max-width:650px){
-header{padding:8px 10px;gap:8px}header h1{font-size:19px}header small{display:none}header #new{font-size:12px;padding:8px 10px}
+header{padding:8px 10px;padding-top:calc(8px + env(safe-area-inset-top, 0px));gap:8px}header h1{font-size:19px}header small{display:none}header #new{font-size:12px;padding:8px 10px}
 header+div.row{padding:5px 10px!important;gap:5px;flex-wrap:nowrap;font-size:10px}#syncStatus{flex:1;min-width:0}#syncNow,#logout{font-size:10px;padding:6px;white-space:nowrap}
 main{padding:10px 6px}nav{gap:5px;margin-bottom:9px}nav button{font-size:12px;padding:8px 5px}
 .stats{gap:5px;margin-bottom:10px}.stat{padding:6px;min-height:39px;font-size:9px;border-radius:8px}.stat b{font-size:19px}
