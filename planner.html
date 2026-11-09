@@ -129,7 +129,7 @@ main{padding:10px 6px}nav{gap:5px;margin-bottom:9px}nav button{font-size:12px;pa
 .calendar .event.order-color.forecast{border-style:dashed;border-left-style:solid}
 </style>
 <header><div><h1>Майстер<span style="color:#368367">План</span></h1><small>Замовлення під контролем</small></div><button class="primary" id="new">＋ Замовлення</button></header>
-<div style="padding:8px 5%;background:#fff7ed" class="row"><span id="syncStatus">Підключення…</span><button id="syncNow">Оновити дані</button><button id="logout">Вийти</button></div><main><nav><button data-view="calendar" class="active">Календар</button><button data-view="orders">Замовлення</button><button data-view="today">Сьогодні</button><button data-view="archive">Архів</button><button data-view="inspector">Інспектор замовлень</button><button data-view="profit">Калькулятор прибутку</button></nav><div class="stats" id="stats"></div><section id="content"></section><div class="notice">Онлайн-версія · Зміни зберігаються у спільній базі після підтвердження сервера. Без інтернету редагування недоступне. Для резервної копії натисни «Експорт».</div><div class="row" style="margin-top:12px"><button id="export">↓ Експорт даних</button><button id="import">↑ Відновити копію</button><button id="demo">Додати приклади</button><input type="file" id="file" accept="application/json,.json" hidden></div></main>
+<div style="padding:8px 5%;background:#fff7ed" class="row"><span id="syncStatus">Підключення…</span><button id="syncNow">Оновити дані</button><button id="logout">Вийти</button></div><main><nav><button data-view="calendar" class="active">Календар</button><button data-view="orders">Замовлення</button><button data-view="today">Сьогодні</button><button data-view="archive">Архів</button><button data-view="inspector">Інспектор замовлень</button><button data-view="profit">Калькулятор прибутку</button><button id="receiptsOpen" type="button">Чеки</button></nav><div class="stats" id="stats"></div><section id="content"></section><div class="notice">Онлайн-версія · Зміни зберігаються у спільній базі після підтвердження сервера. Без інтернету редагування недоступне. Для резервної копії натисни «Експорт».</div><div class="row" style="margin-top:12px"><button id="export">↓ Експорт даних</button><button id="import">↑ Відновити копію</button><button id="demo">Додати приклади</button><input type="file" id="file" accept="application/json,.json" hidden></div></main>
 <dialog id="groupDialog"><form id="groupForm"><div class="tools"><h2>Спільне замовлення</h2><button type="button" id="groupClose">✕</button></div><label>Назва<input id="bulkGroupName" maxlength="120" required list="bulkGroupNames" placeholder="Оломоуц"><datalist id="bulkGroupNames"></datalist></label><p class="hint">Виберіть кухні, шафи та інші вироби. Кожен збереже свої етапи, нотатки й витрати. Для від’єднання очистіть поле «Спільне замовлення» у виробі.</p><div id="groupChoices"></div><button class="primary" id="groupSave">Об’єднати вибрані</button></form></dialog><dialog id="editor"><form id="form"><div class="tools"><h2 id="editorTitle">Нове замовлення</h2><button type="button" id="close">✕</button></div><div id="orderDraftNotice" class="draft-notice" hidden><span>На цьому пристрої є незбережена чернетка.</span><button type="button" id="orderDraftRestore">Відновити чернетку</button><button type="button" id="orderDraftLater">Не зараз</button></div><div class="fields"><label>Назва замовлення *<input name="title" required maxlength="120" placeholder="Кухня · родина Новак"></label><label>Дата створення замовлення<input name="createdDate" type="date"><small>Для нових замовлень заповнюється автоматично. Для старих можна вказати вручну.</small></label><label>Клієнт<input name="client" maxlength="120"></label><label>Телефон<input name="phone" type="tel"></label><label>Адреса<input name="address"></label><label>Погоджена дата здачі<input name="deadline" type="date"><small>Домовленість із клієнтом. Прогноз завершення розраховується окремо за датами етапів.</small></label><label>Спільне замовлення<input name="groupName" list="orderGroups" maxlength="120" placeholder="Наприклад: Оломоуц"><datalist id="orderGroups"></datalist></label><label>Статус<select name="status"><option value="active">У роботі</option><option value="planned">Заплановано</option><option value="done">Завершено</option><option value="cancelled">Скасовано</option></select></label></div><div id="orderForecast" class="notice" style="margin:0" aria-live="polite"></div><button type="button" id="orderShiftForecast" hidden>Перенести прогноз здачі…</button><label>Нотатки<textarea name="notes"></textarea></label><button type="button" class="primary" id="openCosts">Матеріали та витрати</button><div hidden><div class="tools"><h3>Етапи та завантаження</h3><div class="row"><button type="button" id="standardStages">＋ Типові етапи</button><button type="button" id="addStage">＋ Етап</button></div></div></div><details id="kitchenPlanning"><summary>Розрахувати план замовлення · 45 днів</summary><div class="notice" style="margin:6px 0 0"><div class="fields" style="margin-top:10px"><label>Дата початку<input type="date" id="kitchenStart"></label><label>Очікування матеріалів<select id="materialWeeks"><option value="28">4 тижні</option><option value="21">3 тижні</option><option value="date">Точна дата отримання</option></select></label><label id="materialDateLabel" hidden>Дата отримання матеріалів<input type="date" id="materialDate"></label></div><button type="button" id="kitchenTemplate" style="margin-top:10px">Розрахувати етапи замовлення</button><p class="hint">4 дні — замір і проєкт; матеріали — 3–4 тижні або до точної дати отримання; по 3 дні — цех і монтаж. Решта — запас до здачі. Дати можна змінити. Неділі пропускаються; очікування матеріалів — календарні дні.</p></div></details><div hidden><div id="stages"></div><p class="hint">Кожен етап може тривати кілька днів: вкажи початок і завершення. Наприклад, монтаж 20–22 числа займе всі три дні. Без годин етап займає весь день. Кінцева дата включно. «Очікування» не займає ваш час. Завершені етапи не створюють накладок.</p></div><p class="hint">Етапи можна додавати й коригувати в календарі. Розрахований план зберігається разом із замовленням.</p><div id="validation" aria-live="polite"></div><div class="order-savebar"><small id="orderSaveStatus" role="status"></small><div class="tools"><button type="button" id="delete" class="danger">Видалити</button><button class="primary" type="submit">Зберегти замовлення</button></div></div></form></dialog><dialog id="dayDialog"><div class="tools"><h2 id="dayTitle"></h2><button id="dayClose">✕</button></div><button class="primary" id="planDay">＋ Запланувати роботу на цей день</button><button type="button" id="toggleDayOff" hidden></button><div id="dayTasks"></div></dialog><dialog id="costDialog"><div class="tools"><h2>Матеріали та витрати</h2><button type="button" id="costClose">✕</button></div><div class="row"><label>1 EUR = CZK<input type="number" id="rateEUR" min="0.000001" step="any" placeholder="Введи курс"></label><label>1 PLN = CZK<input type="number" id="ratePLN" min="0.000001" step="any" placeholder="Введи курс"></label></div><div class="row" style="margin:8px 0"><button type="button" id="updateCostRates">↻ Оновити курс</button><small id="costRateDate" aria-live="polite"></small></div><table class="cost-table"><thead><tr><th>Матеріал</th><th>№ замовлення</th><th>Вартість <select id="costCurrency"><option>CZK</option><option>EUR</option><option>PLN</option></select></th></tr></thead><tbody id="costRows"></tbody></table><button type="button" id="costAdd">＋ Рядок</button><h3 id="costTotal" style="margin:18px 0"></h3><div class="cost-agreement"><label>Вартість, погоджена з клієнтом <span id="agreedCurrency"></span><input id="agreedPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Введи погоджену суму"></label><label>Розмір авансу <span id="advanceCurrency"></span><input id="advanceAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Введи суму авансу"></label><div><strong>Різниця після витрат</strong><output id="costDifference" aria-live="polite"></output><small>Погоджена вартість мінус сума матеріалів та витрат.</small></div></div><div class="tools"><small>Кожен рядок — окремий матеріал або витрата.</small><button type="button" id="costDone" class="primary">Зберегти зміни</button></div></dialog><div id="toast" role="status"></div><dialog id="ukDatePicker" aria-label="Вибір дати українською"><div class="date-head"><button type="button" id="ukDatePrev" aria-label="Попередній місяць">←</button><h2 id="ukDateTitle"></h2><button type="button" id="ukDateNext" aria-label="Наступний місяць">→</button></div><div class="date-week" aria-hidden="true"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Нд</span></div><div class="date-grid" id="ukDateDays" role="group" aria-label="Дні місяця"></div><div class="date-actions"><button type="button" id="ukDateClear">Очистити</button><button type="button" id="ukDateToday">Сьогодні</button><button type="button" id="ukDateCancel">Скасувати</button></div></dialog>
 <dialog id="dayPlanner"><form id="dayPlanForm"><div class="tools"><h2>Запланувати роботу</h2><button type="button" id="planClose">✕</button></div><label>Замовлення<select id="planOrder"></select><small>Для роботи над наявним замовленням вибери його зі списку. Без прив’язки робота зберігається лише в календарі.</small></label><label id="planNewLabel">Опис роботи (необов’язково)<input id="planNewTitle" maxlength="120"></label><div class="fields"><label>Робота<select name="name" required><option value="Замір">Замір</option><option value="Робота з проєктом">Робота з проєктом</option><option value="Монтаж">Монтаж</option><option value="Збірка">Збірка</option></select></label><label>Відповідальний<select name="person"><option value="me">Прокопенко</option><option value="partner">Цола</option><option value="both">Обоє</option><option value="wait">Очікування</option></select></label><label>Початок<input name="start" type="date" required></label><label>Завершення включно<input name="end" type="date" required></label><label>З години<input name="from" type="time"></label><label>До години<input name="to" type="time"></label></div><p class="hint">Без годин робота займає весь день. Для кількох днів зміни дату завершення.</p><button class="primary">Додати до календаря</button></form></dialog><dialog id="quickEditor"><form id="quickForm"><div class="tools"><h2 id="quickTitle">Редагувати етап</h2><button type="button" id="quickClose">✕</button></div><p id="quickOrder" class="muted"></p><button type="button" id="quickAddStage" class="primary" style="margin-bottom:14px;font-weight:700">＋ Додати етап</button><div id="quickFields"></div><p class="hint" id="quickEditHint">Зміни стосуються всього етапу, включно з усіма днями його тривалості. Після зміни завершення наступні етапи та конфліктні роботи перераховуються. Запас між етапами може поглинути затримку. Погоджена дата здачі залишається незмінною.</p><div id="quickShiftPanel" hidden>
   <label>Перенести з <span id="quickShiftFrom"></span> на<input id="quickShiftDate" type="date"></label>
@@ -528,7 +528,7 @@ async function updateParentRates(){if(parentRatesLoading||parentSaving)return;re
 function initParentOrders(){const style=document.createElement('style');style.textContent='.parent-card h3{font-size:22px;margin:12px 0}.parent-panel{background:white;border:1px solid var(--line);border-radius:12px;padding:16px;margin:15px 0}.parent-panel h4{margin-bottom:8px}.parent-table-wrap{overflow:auto}.parent-work-table{border-collapse:collapse;width:100%;min-width:660px}.parent-work-table th,.parent-work-table td{padding:7px;text-align:left;border-bottom:1px solid var(--line)}.parent-work-table th select{display:block;max-width:110px;padding:4px;font-size:11px;margin:5px 0}.parent-work-table input{width:78px;min-width:65px;padding:7px}.parent-total-line{display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:1px solid var(--line)}.parent-cost-row{display:grid;grid-template-columns:2fr 1fr 1fr 80px 36px;gap:6px;align-items:center}.parent-cost-row input,.parent-cost-row select{min-width:0}.parent-savebar{position:sticky;bottom:0;background:#fff;padding:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:9px;z-index:8}.parent-savebar span{font-size:12px}#parentForm>.fields{grid-template-columns:repeat(3,minmax(0,1fr))}#parentNotes{min-height:65px}#parentPlanSummary .notice{margin-bottom:0}#parentFinanceSummary{margin-top:12px}#parentBack{margin-bottom:12px}@media(max-width:650px){#parentForm>.fields{grid-template-columns:repeat(2,minmax(0,1fr))}.parent-panel{padding:10px}.parent-cost-row{grid-template-columns:1fr 75px 36px}.parent-cost-row input:first-child{grid-column:1/3}.parent-cost-row input:nth-child(2){display:none}.parent-savebar{flex-wrap:wrap}.parent-total-line{font-size:13px}.parent-card h3{font-size:20px}}';document.head.append(style);
  window.addEventListener('pagehide',()=>{if(parentView&&parentDraft){readParent();if(JSON.stringify(parentDraft)!==parentBaseline)saveParentDraft()}});
  window.addEventListener('beforeunload',e=>{if(parentView&&parentDraft&&JSON.stringify(parentDraft)!==parentBaseline){saveParentDraft();e.preventDefault();e.returnValue=''}});
- document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{parentView=null;parentDraft=null}));
+ document.querySelectorAll('nav button[data-view]').forEach(b=>b.addEventListener('click',()=>{parentView=null;parentDraft=null}));
 }
 
 </script><script>
@@ -566,7 +566,7 @@ function overlaps(a,b){if(a.person==='wait'||b.person==='wait'||!(a.person==='bo
 function conflicts(data){const tasks=scheduleOrders(data).flatMap(o=>o.stages.filter(s=>busy(o,s)).map(s=>({o,s}))),pairs=[];for(let i=0;i<tasks.length;i++)for(let j=i+1;j<tasks.length;j++)if(overlaps(tasks[i].s,tasks[j].s))pairs.push([tasks[i],tasks[j]]);return pairs}
 function allTasks(day){return scheduleOrders(orders).filter(o=>!o.archived&&!['done','cancelled'].includes(o.status)).flatMap(o=>o.stages.filter(s=>s.start<=day&&s.end>=day&&(!isDayOff(day)||s.person==='wait')&&(filter==='all'||s.person===filter||s.person==='both')).map(s=>({o,s})))}
 const DAY_NOTES_ID='meisterplan-day-notes';function dayNote(day){return orders.find(o=>o.id===DAY_NOTES_ID)?.dayNotes?.[day]||''}
-function render(){document.body.classList.toggle('inspector-view',view==='inspector');refreshToday();const pairs=conflicts(orders);$('#stats').innerHTML=`<div class="stat">Активних замовлень<b>${new Set(orders.filter(o=>!o.standalone&&!o.archived&&!['done','cancelled'].includes(o.status)).map(o=>o.groupName?.trim()?'group:'+groupKey(o.groupName):o.id)).size}</b></div><div class="stat">Справ на сьогодні<b>${allTasks(today).filter(t=>!t.s.done).length}</b></div><button class="stat" id="conflictJump" style="text-align:left" aria-label="Перейти до накладок">Накладок у графіку<b style="color:${pairs.length?'#b2572f':'inherit'}">${pairs.length}</b></button>`;$('#conflictJump').onclick=()=>{if(!pairs.length){toast('Накладок немає');return}highlightConflicts=true;jumpConflict(conflictDay(pairs.slice().sort((a,b)=>conflictDay(a).localeCompare(conflictDay(b)))[0]))};document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='calendar')renderCalendar(pairs);else if(view==='orders'||view==='archive')renderOrders(view==='archive');else if(view==='inspector')renderOrderInspector();else if(view==='profit')MasterPlanProfit.renderQuick();else renderToday(pairs)}
+function render(){document.body.classList.toggle('inspector-view',view==='inspector');refreshToday();const pairs=conflicts(orders);$('#stats').innerHTML=`<div class="stat">Активних замовлень<b>${new Set(orders.filter(o=>!o.standalone&&!o.archived&&!['done','cancelled'].includes(o.status)).map(o=>o.groupName?.trim()?'group:'+groupKey(o.groupName):o.id)).size}</b></div><div class="stat">Справ на сьогодні<b>${allTasks(today).filter(t=>!t.s.done).length}</b></div><button class="stat" id="conflictJump" style="text-align:left" aria-label="Перейти до накладок">Накладок у графіку<b style="color:${pairs.length?'#b2572f':'inherit'}">${pairs.length}</b></button>`;$('#conflictJump').onclick=()=>{if(!pairs.length){toast('Накладок немає');return}highlightConflicts=true;jumpConflict(conflictDay(pairs.slice().sort((a,b)=>conflictDay(a).localeCompare(conflictDay(b)))[0]))};document.querySelectorAll('nav button[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='calendar')renderCalendar(pairs);else if(view==='orders'||view==='archive')renderOrders(view==='archive');else if(view==='inspector')renderOrderInspector();else if(view==='profit')MasterPlanProfit.renderQuick();else renderToday(pairs)}
 function refreshToday(){const next=dateStr(new Date());if(next===today)return false;const old=today;today=next;if(month.getFullYear()===Number(old.slice(0,4))&&month.getMonth()===Number(old.slice(5,7))-1&&next.slice(0,7)!==old.slice(0,7)){month=new Date(Number(next.slice(0,4)),Number(next.slice(5,7))-1,1)}return true}
 function resumeCalendarDate(){if(refreshToday())render()}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)resumeCalendarDate()});
@@ -713,7 +713,7 @@ $('#materialWeeks').onchange=()=>{$('#materialDateLabel').hidden=$('#materialWee
 $('#kitchenTemplate').onclick=()=>{const start=$('#kitchenStart').value;if(!start){toast('Вкажи дату початку замовлення.');return}if(!editing&&start<localToday()){toast('Початок нового замовлення не може бути в минулому.');return}stageRead();if(draft.length&&!confirm('Замінити поточні етапи шаблоном замовлення?'))return;let waiting=Number($('#materialWeeks').value);if($('#materialWeeks').value==='date'){const receipt=$('#materialDate').value;if(!receipt){toast('Вкажи дату отримання матеріалів.');return}waiting=Math.round((new Date(receipt+'T12:00')-new Date(workEnd(nextWorkDay(start),4)+'T12:00'))/86400000);if(waiting<1){toast('Дата отримання має бути після завершення 4 днів заміру й проєкту.');return}}const plan=kitchenPlan(start,waiting);draft=plan.stages;const field=$('#form').elements.namedItem('deadline');if(!field.value||confirm('Встановити кінцевий термін здачі '+plan.deadline+'? Поточний термін: '+field.value))field.value=plan.deadline;renderStages();$('#validation').innerHTML='<div class="notice">План розраховано. Монтаж завершується '+draft[3].end+'. До терміну '+esc(field.value)+' є запас; перевір дати й відповідальних. Накладки буде перевірено при збереженні.</div>';};
 $('#standardStages').onclick=()=>{stageRead();const templates=[['Замір','me'],['Проєктування','me'],['Доставка матеріалів','wait'],['Збірка в цеху','partner'],['Монтаж','both']];let added=0;for(const [name,person] of templates){if(!draft.some(s=>s.name===name)){draft.push({id:uid(),name,person,start:'',end:'',from:'',to:'',done:false});added++}}renderStages();toast(added?'Етапи додано. Вкажи дати для кожного.':'Типові етапи вже є в замовленні.')};
 $('#stages').addEventListener('input',()=>{stageRead();updateDraftForecast()});$('#form').elements.namedItem('deadline').addEventListener('input',updateDraftForecast);
-$('#addStage').onclick=()=>{stageRead();draft.push({id:uid(),name:'Збірка в цеху',person:'partner',start:nextWorkDay(localToday()),end:nextWorkDay(localToday()),from:'',to:'',done:false});renderStages()};$('#new').onclick=()=>openOrder();$('#close').onclick=()=>closeOrderEditor();$('#dayClose').onclick=()=>$('#dayDialog').close();document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{if(parentSaving)return;parentView=null;view=b.dataset.view;render()});
+$('#addStage').onclick=()=>{stageRead();draft.push({id:uid(),name:'Збірка в цеху',person:'partner',start:nextWorkDay(localToday()),end:nextWorkDay(localToday()),from:'',to:'',done:false});renderStages()};$('#new').onclick=()=>openOrder();$('#close').onclick=()=>closeOrderEditor();$('#dayClose').onclick=()=>$('#dayDialog').close();document.querySelectorAll('nav button[data-view]').forEach(b=>b.onclick=()=>{if(parentSaving)return;parentView=null;view=b.dataset.view;render()});
 async function saveOrder(e){e.preventDefault();if(orderSaving)return false;if(costRatesLoading){toast('Зачекайте завершення оновлення курсу, потім збережіть замовлення.');return false}if(!$('#form').reportValidity())return false;stageRead();if($('#costDialog').open)readCosts();if(!validCosts(costDraft)){toast('Перевір суми та курси у таблиці витрат.');return}const o={...(orders.find(x=>x.id===editing)||{}),id:editing||uid(),stages:structuredClone(draft),costs:structuredClone(costDraft),planning:{start:$('#kitchenStart').value,waiting:$('#materialWeeks').value,receipt:$('#materialDate').value}};for(const name of ['title','createdDate','client','phone','address','deadline','notes','status','groupName'])o[name]=$('#form').elements.namedItem(name).value.trim();if(o.archived&&o.status!=='done')o.archived=false;if(!validData([o])){$('#validation').innerHTML='<div class="warning">Перевір дати етапів. Завершення має бути після початку; години заповнюй парою.</div>';return}const scheduleIssue=scheduleError(o,!editing);if(scheduleIssue){$('#validation').textContent=scheduleIssue;toast(scheduleIssue);return}let next=orders.filter(x=>x.id!==o.id).concat(o);const original=orders.find(x=>x.id===o.id);if(original){const changes=o.stages.filter(stage=>{const old=original.stages.find(s=>s.id===stage.id);return old&&old.end!==stage.end}).map(stage=>({id:stage.id,oldEnd:original.stages.find(s=>s.id===stage.id).end,end:stage.end}));for(const change of changes)shiftFollowing(o,change.id,change.oldEnd,change.end);if(changes.length){try{next=cascadeSchedule(next,orders,changes[0].id);const summary=cascadePreview(orders,next);if(summary.length&&!confirm('Оновлений план і прогнози:\n'+summary.join('\n')+'\n\nЗберегти? Погоджені дати залишаються незмінними.'))return}catch(err){toast(err.message);return}}}const pairs=conflicts(next);const beyond=o.deadline&&o.stages.some(s=>!s.done&&s.end>o.deadline);if(pairs.length||beyond){const text=[...pairs.map(p=>p.map(t=>t.o.title+' · '+t.s.name).join(' ↔ ')),...(beyond?['Деякі етапи завершуються після терміну здачі.']:[])].join('\n');$('#validation').textContent=text;if(!confirm('Є попередження:\n'+text+'\n\nЗберегти цей план попри попередження?'))return}orderSaving=true;setOrderSaving(true);saveLocalDraft();try{if(await persist(next)){clearLocalDraft();$('#costDialog').close();$('#editor').close();render();toast('Усі зміни замовлення збережено');return true}return false}finally{orderSaving=false;setOrderSaving(false)}}
 $('#form').onsubmit=saveOrder;
 $('#delete').onclick=()=>{if(editing)deleteOrder(editing)};
@@ -961,4 +961,311 @@ $('#groupClose').onclick=()=>$('#groupDialog').close();
 $('#groupForm').onsubmit=async e=>{e.preventDefault();const name=$('#bulkGroupName').value.trim(),ids=[...$('#groupChoices').querySelectorAll('input:checked')].map(e=>e.value);if(!name||!ids.length){toast('Вкажіть назву спільного замовлення та виберіть вироби.');return}const next=structuredClone(orders);for(const o of next)if(ids.includes(o.id))o.groupName=name;$('#groupSave').disabled=true;try{if(await persist(next)){$('#groupDialog').close();render();toast('Вироби об’єднано у «'+name+'»')}}finally{$('#groupSave').disabled=false}};
 
 initParentOrders();render();bootCloud();
-</script></html>
+</script>
+<dialog id="receiptsDialog" style="width:min(680px,94vw);max-height:88dvh;overflow:auto">
+ <div class="tools"><h2>Чеки</h2><button type="button" id="receiptsClose">Закрити</button></div>
+ <p class="hint">Фото зберігаються в цьому браузері на цьому пристрої. PDF можна завантажити або передати в поштовий застосунок.</p>
+ <form id="receiptForm">
+  <div class="fields">
+   <label>Дата чека<input id="receiptDate" type="date" required></label>
+   <label>Замовлення<select id="receiptOrder"></select></label>
+   <label>Сфотографувати чек<input id="receiptCamera" type="file" accept="image/*" capture="environment"></label>
+   <label>Вибрати готове фото<input id="receiptFile" type="file" accept="image/*"></label>
+  </div>
+  <img id="receiptPreview" alt="Попередній перегляд чека" hidden style="max-width:100%;max-height:40vh;object-fit:contain">
+  <button class="primary" id="receiptSave" disabled>Зберегти чек</button>
+ </form>
+ <hr>
+ <div class="fields">
+  <label>Від<input id="receiptsFrom" type="date"></label>
+  <label>До включно<input id="receiptsTo" type="date"></label>
+ </div>
+ <div class="row"><button id="receiptSelectAll">Вибрати всі</button><button id="receiptDownload" disabled>Завантажити PDF</button><button id="receiptShare" disabled>Поділитися PDF</button></div>
+ <p id="receiptStatus" role="status"></p>
+ <div id="receiptList"></div>
+</dialog>
+<script>
+(() => {
+ const dialog = $('#receiptsDialog');
+ const form = $('#receiptForm');
+ const preview = $('#receiptPreview');
+ const status = $('#receiptStatus');
+ const selected = new Set();
+ const thumbnailUrls = [];
+ let database, scope, records = [], pending = null, photoVersion = 0, busy = false;
+
+ function openDatabase() {
+  if (!database) database = new Promise((resolve, reject) => {
+   const request = indexedDB.open('masterplan-receipts', 1);
+   request.onupgradeneeded = () => {
+    request.result.createObjectStore('receipts', {keyPath:'id'}).createIndex('scope', 'scope');
+   };
+   request.onsuccess = () => resolve(request.result);
+   request.onerror = () => reject(request.error);
+  }).catch(error => { database = null; throw error; });
+  return database;
+ }
+
+ async function access(mode, operation) {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+   const transaction = db.transaction('receipts', mode);
+   const request = operation(transaction.objectStore('receipts'));
+   transaction.oncomplete = () => resolve(request.result);
+   transaction.onabort = () => reject(transaction.error);
+  });
+ }
+
+ async function imageToJpeg(file) {
+  const url = URL.createObjectURL(file);
+  try {
+   const image = new Image();
+   image.src = url;
+   await image.decode();
+   const scale = Math.min(1, 2800 / Math.max(image.naturalWidth, image.naturalHeight));
+   const canvas = document.createElement('canvas');
+   canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+   canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+   const context = canvas.getContext('2d', {alpha:false});
+   context.fillStyle = '#fff';
+   context.fillRect(0, 0, canvas.width, canvas.height);
+   context.drawImage(image, 0, 0, canvas.width, canvas.height);
+   const photo = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', .91));
+   if (!photo) throw Error('Не вдалося підготувати фото.');
+   return {photo, width:canvas.width, height:canvas.height};
+  } finally { URL.revokeObjectURL(url); }
+ }
+
+ function resetPhoto() {
+  photoVersion++;
+  pending = null;
+  if (preview.hasAttribute('src')) URL.revokeObjectURL(preview.src);
+  preview.removeAttribute('src');
+  preview.hidden = true;
+  for (const input of [$('#receiptCamera'), $('#receiptFile')]) input.value = '';
+  $('#receiptSave').disabled = true;
+ }
+
+ for (const input of [$('#receiptCamera'), $('#receiptFile')]) input.onchange = async () => {
+  const file = input.files[0];
+  if (!file || busy) return;
+  resetPhoto();
+  const version = photoVersion;
+  status.textContent = 'Готую фото…';
+  try {
+   const image = await imageToJpeg(file);
+   if (version !== photoVersion) return;
+   pending = image;
+   preview.src = URL.createObjectURL(image.photo);
+   preview.hidden = false;
+   $('#receiptSave').disabled = false;
+   status.textContent = 'Перевір, чи весь чек у кадрі й текст читається.';
+  } catch {
+   if (version === photoVersion) status.textContent = 'Не вдалося відкрити фото. Спробуй JPG або PNG.';
+  }
+ };
+
+ function visibleRecords() {
+  const from = $('#receiptsFrom').value;
+  const to = $('#receiptsTo').value;
+  return records.filter(record => (!from || record.date >= from) && (!to || record.date <= to));
+ }
+
+ function updateButtons() {
+  const hasSelection = visibleRecords().some(record => selected.has(record.id));
+  $('#receiptDownload').disabled = busy || !hasSelection;
+  $('#receiptShare').disabled = busy || !hasSelection;
+  $('#receiptSelectAll').disabled = busy || !visibleRecords().length;
+  $('#receiptSave').disabled = busy || !pending;
+ }
+
+ function renderList() {
+  thumbnailUrls.splice(0).forEach(url => URL.revokeObjectURL(url));
+  const list = $('#receiptList');
+  list.replaceChildren();
+  const visible = visibleRecords();
+  if (!visible.length) list.textContent = 'За цей період чеків немає.';
+  for (const record of visible) {
+   const row = document.createElement('div');
+   row.className = 'row';
+   const label = document.createElement('label');
+   const checkbox = document.createElement('input');
+   checkbox.type = 'checkbox';
+   checkbox.style.width = 'auto';
+   checkbox.checked = selected.has(record.id);
+   checkbox.onchange = () => {
+    if (checkbox.checked) selected.add(record.id);
+    else selected.delete(record.id);
+    updateButtons();
+   };
+   const title = orders.find(order => order.id === record.orderId)?.title || record.orderTitle || 'Загальні витрати';
+   label.append(checkbox, ' ' + record.date + ' · ' + title);
+   const link = document.createElement('a');
+   link.href = URL.createObjectURL(record.photo);
+   thumbnailUrls.push(link.href);
+   link.target = '_blank';
+   link.rel = 'noopener';
+   link.textContent = 'Фото';
+   const remove = document.createElement('button');
+   remove.textContent = 'Видалити';
+   remove.onclick = () => {
+    if (!busy && confirm('Видалити цей чек?')) run(async () => {
+     await access('readwrite', store => store.delete(record.id));
+     records = records.filter(item => item.id !== record.id);
+     selected.delete(record.id);
+     renderList();
+     status.textContent = 'Чек видалено.';
+    });
+   };
+   row.append(label, link, remove);
+   list.append(row);
+  }
+  updateButtons();
+ }
+
+ async function run(action) {
+  if (busy) return;
+  busy = true;
+  updateButtons();
+  try { await action(); }
+  catch { status.textContent = 'Не вдалося виконати дію. Перевір доступ браузера до сховища та спробуй ще раз.'; }
+  finally { busy = false; updateButtons(); }
+ }
+
+ $('#receiptsOpen').onclick = () => {
+  if (!cloudSession || cloudRevision === null) return toast('Спочатку увійди й завантаж дані.');
+  let userId = cloudSession.user?.id;
+  if (!userId) {
+   try {
+    const payload = cloudSession.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    userId = JSON.parse(atob(payload)).sub;
+   } catch {}
+  }
+  if (!userId) return toast('Увійди повторно, щоб відкрити чеки.');
+  scope = JSON.stringify([cloudConfig.url, cloudConfig.workspace, userId]);
+  form.reset();
+  resetPhoto();
+  records = [];
+  selected.clear();
+  const date = localToday();
+  $('#receiptDate').value = date;
+  $('#receiptsFrom').value = date.slice(0, 7) + '-01';
+  $('#receiptsTo').value = '';
+  $('#receiptOrder').replaceChildren(new Option('Загальні витрати', ''), ...orders
+   .filter(order => order.id !== DAY_NOTES_ID && !order.standalone)
+   .map(order => new Option(order.title + (order.archived ? ' · архів' : ''), order.id)));
+  status.textContent = '';
+  renderList();
+  dialog.showModal();
+  run(async () => {
+   records = await access('readonly', store => store.index('scope').getAll(scope));
+   records.sort((a,b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+   renderList();
+  });
+ };
+
+ $('#receiptsClose').onclick = () => { if (!busy) dialog.close(); };
+ dialog.oncancel = event => { if (busy) event.preventDefault(); };
+ dialog.onclose = () => {
+  resetPhoto();
+  thumbnailUrls.splice(0).forEach(url => URL.revokeObjectURL(url));
+  records = [];
+  $('#receiptList').replaceChildren();
+ };
+ form.onsubmit = event => {
+  event.preventDefault();
+  if (!pending) return;
+  run(async () => {
+   const orderId = $('#receiptOrder').value;
+   const record = {...pending, id:uid(), scope, date:$('#receiptDate').value, orderId,
+    orderTitle:orders.find(order => order.id === orderId)?.title || ''};
+   await access('readwrite', store => store.add(record));
+   records.push(record);
+   records.sort((a,b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+   if (!visibleRecords().some(item => item.id === record.id)) {
+    $('#receiptsFrom').value = record.date.slice(0, 7) + '-01';
+    $('#receiptsTo').value = '';
+   }
+   resetPhoto();
+   renderList();
+   status.textContent = 'Чек збережено.';
+  });
+ };
+ for (const input of [$('#receiptsFrom'), $('#receiptsTo')]) input.onchange = renderList;
+ $('#receiptSelectAll').onclick = () => {
+  visibleRecords().forEach(record => selected.add(record.id));
+  renderList();
+ };
+
+ // Embed each JPEG on a separate A4 page without a remote PDF library.
+ function makePdf(items) {
+  const encoder = new TextEncoder();
+  const parts = [], offsets = [0];
+  let size = 0;
+  function append(value) {
+   const part = typeof value === 'string' ? encoder.encode(value) : value;
+   parts.push(part);
+   size += part.size ?? part.byteLength;
+  }
+  function object(id, ...contents) {
+   offsets[id] = size;
+   append(id + ' 0 obj\n');
+   contents.forEach(append);
+   append('\nendobj\n');
+  }
+  append('%PDF-1.4\n');
+  object(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  object(2, '<< /Type /Pages /Count ' + items.length + ' /Kids [' +
+   items.map((_, index) => (3 + index * 3) + ' 0 R').join(' ') + '] >>');
+  items.forEach(({photo,width,height}, index) => {
+   const page = 3 + index * 3;
+   const scale = Math.min(555 / width, 802 / height);
+   const w = width * scale, h = height * scale;
+   const drawing = 'q\n' + [w,0,0,h,(595-w)/2,(842-h)/2].map(n => n.toFixed(3)).join(' ') + ' cm\n/Receipt Do\nQ\n';
+   object(page, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /XObject << /Receipt ' +
+    (page+1) + ' 0 R >> >> /Contents ' + (page+2) + ' 0 R >>');
+   object(page+1, '<< /Type /XObject /Subtype /Image /Width ' + width + ' /Height ' + height +
+    ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + photo.size + ' >>\nstream\n', photo, '\nendstream');
+   object(page+2, '<< /Length ' + drawing.length + ' >>\nstream\n', drawing, 'endstream');
+  });
+  const xref = size;
+  append('xref\n0 ' + offsets.length + '\n0000000000 65535 f \n' +
+   offsets.slice(1).map(offset => String(offset).padStart(10, '0') + ' 00000 n \n').join('') +
+   'trailer\n<< /Size ' + offsets.length + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
+  return new File(parts, 'MasterPlan-cheky-' + items[0].date + '_' + items.at(-1).date + '.pdf', {type:'application/pdf'});
+ }
+
+ function download(file) {
+  const url = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = file.name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+ }
+
+ function exportPdf(share) {
+  if (busy) return;
+  const items = visibleRecords().filter(record => selected.has(record.id));
+  if (!items.length) return;
+  let file;
+  try { file = makePdf(items); }
+  catch { status.textContent = 'Не вдалося зібрати PDF. Спробуй вибрати менше чеків.'; return; }
+  if (share && navigator.canShare?.({files:[file]})) {
+   navigator.share({files:[file]}).catch(error => {
+    if (error.name !== 'AbortError') status.textContent = 'Завантаж PDF і прикріпи його до листа.';
+   });
+   return;
+  }
+  download(file);
+  status.textContent = share ? 'PDF завантажується. Прикріпи його до листа бухгалтеру.' : 'PDF завантажується.';
+ }
+ $('#receiptDownload').onclick = () => exportPdf(false);
+ $('#receiptShare').onclick = () => exportPdf(true);
+})();
+</script>
+
+
+</html>
