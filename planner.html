@@ -127,9 +127,77 @@ main{padding:10px 6px}nav{gap:5px;margin-bottom:9px}nav button{font-size:12px;pa
 .calendar .event.order-color.deadline{background:hsl(var(--order-hue) 54% 33%);color:white;box-shadow:none}
 .calendar .event.order-color.deadline:hover{background:hsl(var(--order-hue) 54% 26%)}
 .calendar .event.order-color.forecast{border-style:dashed;border-left-style:solid}
+.receipts-nav {
+ display:inline-flex;
+ align-items:stretch;
+ min-width:0;
+}
+.receipts-nav #receiptsOpen {
+ border-radius:8px 0 0 8px;
+}
+.receipts-nav #receiptsCameraOpen {
+ display:grid;
+ place-items:center;
+ border-radius:0 8px 8px 0;
+ margin-inline-start:-1px;
+}
+.receipts-nav button:focus-visible {
+ position:relative;
+ z-index:1;
+}
+#receiptsDialog {
+ width:min(680px,94vw);
+ max-height:88dvh;
+ overflow:auto;
+ overscroll-behavior:contain;
+}
+@media (max-width:700px) {
+ main > nav {
+  display:grid;
+  grid-template-columns:repeat(12,minmax(0,1fr));
+  gap:5px;
+ }
+ main > nav > button { grid-column:span 3; }
+ main > nav > button:is([data-view="inspector"],[data-view="profit"]),
+ main > nav > .receipts-nav { grid-column:span 4; }
+ main > nav > button:is([data-view="inspector"],[data-view="profit"]),
+ main > nav .receipts-nav button {
+
+  min-width:0;
+  width:100%;
+  padding:7px 3px;
+  font-size:clamp(10px, 3vw, 12px);
+  line-height:1.15;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  min-height:40px;
+ }
+ main > nav .receipts-nav #receiptsCameraOpen {
+  flex:0 0 36px;
+  width:36px;
+ }
+ #receiptsDialog {
+  position:fixed;
+  inset:0;
+  margin:0;
+  box-sizing:border-box;
+  width:100%;
+  max-width:none;
+  height:100vh;
+  height:100svh;
+  max-height:none;
+  border-radius:0;
+  padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+  overflow-x:hidden;
+ }
+ html:has(#receiptsDialog[open]), body:has(#receiptsDialog[open]) {
+  overflow:hidden;
+ }
+}
+
 </style>
 <header><div><h1>Майстер<span style="color:#368367">План</span></h1><small>Замовлення під контролем</small></div><button class="primary" id="new">＋ Замовлення</button></header>
-<div style="padding:8px 5%;background:#fff7ed" class="row"><span id="syncStatus">Підключення…</span><button id="syncNow">Оновити дані</button><button id="logout">Вийти</button></div><main><nav><button data-view="calendar" class="active">Календар</button><button data-view="orders">Замовлення</button><button data-view="today">Сьогодні</button><button data-view="archive">Архів</button><button data-view="inspector">Інспектор замовлень</button><button data-view="profit">Калькулятор прибутку</button><button id="receiptsOpen" type="button">Чеки</button></nav><div class="stats" id="stats"></div><section id="content"></section><div class="notice">Онлайн-версія · Зміни зберігаються у спільній базі після підтвердження сервера. Без інтернету редагування недоступне. Для резервної копії натисни «Експорт».</div><div class="row" style="margin-top:12px"><button id="export">↓ Експорт даних</button><button id="import">↑ Відновити копію</button><button id="demo">Додати приклади</button><input type="file" id="file" accept="application/json,.json" hidden></div></main>
+<div style="padding:8px 5%;background:#fff7ed" class="row"><span id="syncStatus">Підключення…</span><button id="syncNow">Оновити дані</button><button id="logout">Вийти</button></div><main><nav><button data-view="calendar" class="active">Календар</button><button data-view="orders">Замовлення</button><button data-view="today">Сьогодні</button><button data-view="archive">Архів</button><button data-view="inspector">Інспектор замовлень</button><button data-view="profit">Калькулятор прибутку</button><div class="receipts-nav" role="group" aria-label="Чеки"><button id="receiptsOpen" type="button">Чеки</button><button id="receiptsCameraOpen" type="button" aria-label="Сфотографувати чек" title="Сфотографувати чек"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="3.5"/></svg></button></div></nav><div class="stats" id="stats"></div><section id="content"></section><div class="notice">Онлайн-версія · Зміни зберігаються у спільній базі після підтвердження сервера. Без інтернету редагування недоступне. Для резервної копії натисни «Експорт».</div><div class="row" style="margin-top:12px"><button id="export">↓ Експорт даних</button><button id="import">↑ Відновити копію</button><button id="demo">Додати приклади</button><input type="file" id="file" accept="application/json,.json" hidden></div></main>
 <dialog id="groupDialog"><form id="groupForm"><div class="tools"><h2>Спільне замовлення</h2><button type="button" id="groupClose">✕</button></div><label>Назва<input id="bulkGroupName" maxlength="120" required list="bulkGroupNames" placeholder="Оломоуц"><datalist id="bulkGroupNames"></datalist></label><p class="hint">Виберіть кухні, шафи та інші вироби. Кожен збереже свої етапи, нотатки й витрати. Для від’єднання очистіть поле «Спільне замовлення» у виробі.</p><div id="groupChoices"></div><button class="primary" id="groupSave">Об’єднати вибрані</button></form></dialog><dialog id="editor"><form id="form"><div class="tools"><h2 id="editorTitle">Нове замовлення</h2><button type="button" id="close">✕</button></div><div id="orderDraftNotice" class="draft-notice" hidden><span>На цьому пристрої є незбережена чернетка.</span><button type="button" id="orderDraftRestore">Відновити чернетку</button><button type="button" id="orderDraftLater">Не зараз</button></div><div class="fields"><label>Назва замовлення *<input name="title" required maxlength="120" placeholder="Кухня · родина Новак"></label><label>Дата створення замовлення<input name="createdDate" type="date"><small>Для нових замовлень заповнюється автоматично. Для старих можна вказати вручну.</small></label><label>Клієнт<input name="client" maxlength="120"></label><label>Телефон<input name="phone" type="tel"></label><label>Адреса<input name="address"></label><label>Погоджена дата здачі<input name="deadline" type="date"><small>Домовленість із клієнтом. Прогноз завершення розраховується окремо за датами етапів.</small></label><label>Спільне замовлення<input name="groupName" list="orderGroups" maxlength="120" placeholder="Наприклад: Оломоуц"><datalist id="orderGroups"></datalist></label><label>Статус<select name="status"><option value="active">У роботі</option><option value="planned">Заплановано</option><option value="done">Завершено</option><option value="cancelled">Скасовано</option></select></label></div><div id="orderForecast" class="notice" style="margin:0" aria-live="polite"></div><button type="button" id="orderShiftForecast" hidden>Перенести прогноз здачі…</button><label>Нотатки<textarea name="notes"></textarea></label><button type="button" class="primary" id="openCosts">Матеріали та витрати</button><div hidden><div class="tools"><h3>Етапи та завантаження</h3><div class="row"><button type="button" id="standardStages">＋ Типові етапи</button><button type="button" id="addStage">＋ Етап</button></div></div></div><details id="kitchenPlanning"><summary>Розрахувати план замовлення · 45 днів</summary><div class="notice" style="margin:6px 0 0"><div class="fields" style="margin-top:10px"><label>Дата початку<input type="date" id="kitchenStart"></label><label>Очікування матеріалів<select id="materialWeeks"><option value="28">4 тижні</option><option value="21">3 тижні</option><option value="date">Точна дата отримання</option></select></label><label id="materialDateLabel" hidden>Дата отримання матеріалів<input type="date" id="materialDate"></label></div><button type="button" id="kitchenTemplate" style="margin-top:10px">Розрахувати етапи замовлення</button><p class="hint">4 дні — замір і проєкт; матеріали — 3–4 тижні або до точної дати отримання; по 3 дні — цех і монтаж. Решта — запас до здачі. Дати можна змінити. Неділі пропускаються; очікування матеріалів — календарні дні.</p></div></details><div hidden><div id="stages"></div><p class="hint">Кожен етап може тривати кілька днів: вкажи початок і завершення. Наприклад, монтаж 20–22 числа займе всі три дні. Без годин етап займає весь день. Кінцева дата включно. «Очікування» не займає ваш час. Завершені етапи не створюють накладок.</p></div><p class="hint">Етапи можна додавати й коригувати в календарі. Розрахований план зберігається разом із замовленням.</p><div id="validation" aria-live="polite"></div><div class="order-savebar"><small id="orderSaveStatus" role="status"></small><div class="tools"><button type="button" id="delete" class="danger">Видалити</button><button class="primary" type="submit">Зберегти замовлення</button></div></div></form></dialog><dialog id="dayDialog"><div class="tools"><h2 id="dayTitle"></h2><button id="dayClose">✕</button></div><button class="primary" id="planDay">＋ Запланувати роботу на цей день</button><button type="button" id="toggleDayOff" hidden></button><div id="dayTasks"></div></dialog><dialog id="costDialog"><div class="tools"><h2>Матеріали та витрати</h2><button type="button" id="costClose">✕</button></div><div class="row"><label>1 EUR = CZK<input type="number" id="rateEUR" min="0.000001" step="any" placeholder="Введи курс"></label><label>1 PLN = CZK<input type="number" id="ratePLN" min="0.000001" step="any" placeholder="Введи курс"></label></div><div class="row" style="margin:8px 0"><button type="button" id="updateCostRates">↻ Оновити курс</button><small id="costRateDate" aria-live="polite"></small></div><table class="cost-table"><thead><tr><th>Матеріал</th><th>№ замовлення</th><th>Вартість <select id="costCurrency"><option>CZK</option><option>EUR</option><option>PLN</option></select></th></tr></thead><tbody id="costRows"></tbody></table><button type="button" id="costAdd">＋ Рядок</button><h3 id="costTotal" style="margin:18px 0"></h3><div class="cost-agreement"><label>Вартість, погоджена з клієнтом <span id="agreedCurrency"></span><input id="agreedPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Введи погоджену суму"></label><label>Розмір авансу <span id="advanceCurrency"></span><input id="advanceAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Введи суму авансу"></label><div><strong>Різниця після витрат</strong><output id="costDifference" aria-live="polite"></output><small>Погоджена вартість мінус сума матеріалів та витрат.</small></div></div><div class="tools"><small>Кожен рядок — окремий матеріал або витрата.</small><button type="button" id="costDone" class="primary">Зберегти зміни</button></div></dialog><div id="toast" role="status"></div><dialog id="ukDatePicker" aria-label="Вибір дати українською"><div class="date-head"><button type="button" id="ukDatePrev" aria-label="Попередній місяць">←</button><h2 id="ukDateTitle"></h2><button type="button" id="ukDateNext" aria-label="Наступний місяць">→</button></div><div class="date-week" aria-hidden="true"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Нд</span></div><div class="date-grid" id="ukDateDays" role="group" aria-label="Дні місяця"></div><div class="date-actions"><button type="button" id="ukDateClear">Очистити</button><button type="button" id="ukDateToday">Сьогодні</button><button type="button" id="ukDateCancel">Скасувати</button></div></dialog>
 <dialog id="dayPlanner"><form id="dayPlanForm"><div class="tools"><h2>Запланувати роботу</h2><button type="button" id="planClose">✕</button></div><label>Замовлення<select id="planOrder"></select><small>Для роботи над наявним замовленням вибери його зі списку. Без прив’язки робота зберігається лише в календарі.</small></label><label id="planNewLabel">Опис роботи (необов’язково)<input id="planNewTitle" maxlength="120"></label><div class="fields"><label>Робота<select name="name" required><option value="Замір">Замір</option><option value="Робота з проєктом">Робота з проєктом</option><option value="Монтаж">Монтаж</option><option value="Збірка">Збірка</option></select></label><label>Відповідальний<select name="person"><option value="me">Прокопенко</option><option value="partner">Цола</option><option value="both">Обоє</option><option value="wait">Очікування</option></select></label><label>Початок<input name="start" type="date" required></label><label>Завершення включно<input name="end" type="date" required></label><label>З години<input name="from" type="time"></label><label>До години<input name="to" type="time"></label></div><p class="hint">Без годин робота займає весь день. Для кількох днів зміни дату завершення.</p><button class="primary">Додати до календаря</button></form></dialog><dialog id="quickEditor"><form id="quickForm"><div class="tools"><h2 id="quickTitle">Редагувати етап</h2><button type="button" id="quickClose">✕</button></div><p id="quickOrder" class="muted"></p><button type="button" id="quickAddStage" class="primary" style="margin-bottom:14px;font-weight:700">＋ Додати етап</button><div id="quickFields"></div><p class="hint" id="quickEditHint">Зміни стосуються всього етапу, включно з усіма днями його тривалості. Після зміни завершення наступні етапи та конфліктні роботи перераховуються. Запас між етапами може поглинути затримку. Погоджена дата здачі залишається незмінною.</p><div id="quickShiftPanel" hidden>
   <label>Перенести з <span id="quickShiftFrom"></span> на<input id="quickShiftDate" type="date"></label>
@@ -962,7 +1030,7 @@ $('#groupForm').onsubmit=async e=>{e.preventDefault();const name=$('#bulkGroupNa
 
 initParentOrders();render();bootCloud();
 </script>
-<dialog id="receiptsDialog" style="width:min(680px,94vw);max-height:88dvh;overflow:auto">
+<dialog id="receiptsDialog">
  <div class="tools"><h2>Чеки</h2><button type="button" id="receiptsClose">Закрити</button></div>
  <p class="hint">Фото зберігаються в цьому браузері на цьому пристрої. PDF можна завантажити або передати в поштовий застосунок.</p>
  <form id="receiptForm">
@@ -1048,7 +1116,7 @@ initParentOrders();render();bootCloud();
 
  for (const input of [$('#receiptCamera'), $('#receiptFile')]) input.onchange = async () => {
   const file = input.files[0];
-  if (!file || busy) return;
+  if (!file) return;
   resetPhoto();
   const version = photoVersion;
   status.textContent = 'Готую фото…';
@@ -1058,7 +1126,7 @@ initParentOrders();render();bootCloud();
    pending = image;
    preview.src = URL.createObjectURL(image.photo);
    preview.hidden = false;
-   $('#receiptSave').disabled = false;
+   updateButtons();
    status.textContent = 'Перевір, чи весь чек у кадрі й текст читається.';
   } catch {
    if (version === photoVersion) status.textContent = 'Не вдалося відкрити фото. Спробуй JPG або PNG.';
@@ -1132,7 +1200,7 @@ initParentOrders();render();bootCloud();
   finally { busy = false; updateButtons(); }
  }
 
- $('#receiptsOpen').onclick = () => {
+ function openReceipts(takePhoto) {
   if (!cloudSession || cloudRevision === null) return toast('Спочатку увійди й завантаж дані.');
   let userId = cloudSession.user?.id;
   if (!userId) {
@@ -1157,13 +1225,15 @@ initParentOrders();render();bootCloud();
   status.textContent = '';
   renderList();
   dialog.showModal();
+  if (takePhoto) document.getElementById('receiptCamera').click();
   run(async () => {
    records = await access('readonly', store => store.index('scope').getAll(scope));
    records.sort((a,b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
    renderList();
   });
- };
-
+ }
+ document.getElementById('receiptsOpen').onclick = () => openReceipts(false);
+ document.getElementById('receiptsCameraOpen').onclick = () => openReceipts(true);
  $('#receiptsClose').onclick = () => { if (!busy) dialog.close(); };
  dialog.oncancel = event => { if (busy) event.preventDefault(); };
  dialog.onclose = () => {
@@ -1266,6 +1336,7 @@ initParentOrders();render();bootCloud();
  $('#receiptShare').onclick = () => exportPdf(true);
 })();
 </script>
+
 
 
 </html>
