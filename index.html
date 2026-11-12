@@ -223,6 +223,7 @@ panelMat.onBeforeCompile=shader=>{shader.uniforms.transparencyFrame=transparency
 const qualityLabel=document.createElement('label');qualityLabel.className='muted';qualityLabel.htmlFor='quality';qualityLabel.textContent='Якість згладжування';
 const quality=document.createElement('select');quality.id='quality';quality.setAttribute('aria-label','Якість згладжування');quality.add(new Option('Швидка','64',true,true));quality.add(new Option('Висока','128'));quality.add(new Option('Максимальна','256'));const smoothLabel=$('smooth').closest('label');smoothLabel.after(qualityLabel,quality);
 const smoothProgress=document.createElement('div');smoothProgress.className='muted';smoothProgress.id='smooth-progress';quality.after(smoothProgress);
+const mobileSelection=matchMedia('(max-width:800px) and (pointer:coarse), (max-width:520px)');
 const selectedMat=new THREE.MeshStandardMaterial({color:0xb88160,roughness:.8,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
 const hardwareMat=new THREE.MeshStandardMaterial({color:0x536761,roughness:.62,metalness:.15,side:THREE.DoubleSide});
 const labelMat=new THREE.MeshBasicMaterial({color:0x253c36,side:THREE.DoubleSide});
@@ -308,7 +309,18 @@ function syncPanelOpacity(){
  for (const material of [xrayPanelMat, xraySelectedMat, ...(root?.userData.xrayTextureCache?.values() || [])]) {
   syncXrayMaterial(material, transparency);
  }
- const opacity=motionOpaque?1:1-transparency;panelMat.opacity=opacity;selectedMat.opacity=opacity;if(root?.userData.panelTextureCache)for(const mat of root.userData.panelTextureCache.values())mat.opacity=opacity;}
+ const opacity=motionOpaque?1:1-transparency;
+ panelMat.opacity=opacity;
+ // Keep the selected face readable even when the other panels are nearly transparent.
+ selectedMat.opacity=mobileSelection.matches?opacity+(1-opacity)*0.25:opacity;
+ selectedMat.color.setHex(mobileSelection.matches?0xe88c49:0xb88160);
+ selectedMat.emissive.setHex(mobileSelection.matches?0x582809:0x000000);
+ if(root?.userData.panelTextureCache)for(const mat of root.userData.panelTextureCache.values())mat.opacity=opacity;
+}
+mobileSelection.addEventListener('change',()=>{
+ syncPanelOpacity();
+ invalidate();
+});
 controls.addEventListener('change',()=>{lastCameraMotion=performance.now();invalidate();});
 function resize(){const el=$('viewport');const ratio=Math.min(Math.max(devicePixelRatio,1.5),2,Math.sqrt(3000000/Math.max(1,el.clientWidth*el.clientHeight)));renderer.setPixelRatio(ratio);renderer.setSize(el.clientWidth,el.clientHeight);composer.setPixelRatio(ratio);composer.setSize(el.clientWidth,el.clientHeight);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix();invalidate();}
 quality.onchange=invalidate;
