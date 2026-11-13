@@ -858,12 +858,11 @@ function moveDraftMeasurement(x,y,rect){
  draft.offset.x=x-rect.left-(1+end.x)*rect.width/2;
  draft.offset.y=y-rect.top-(1-end.y)*rect.height/2;
 }
-function autoMeasureOffset(a,b,width,height){
- // Screen coordinates in CSS pixels; reserve space for arrows and the label.
+function autoMeasureOffset(a,b,width,height,outline=[]){
  const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy);
  const normal=length>1?{x:-dy/length,y:dx/length}:{x:1,y:0};
- const margin=24;
- const available=sign=>{
+ const margin=24,clearance=32;
+ const candidates=[1,-1].map(sign=>{
   const nx=normal.x*sign,ny=normal.y*sign;
   let room=Infinity;
   for(const p of [a,b]){
@@ -872,11 +871,37 @@ function autoMeasureOffset(a,b,width,height){
    if(ny>1e-6)room=Math.min(room,(height-margin-p.y)/ny);
    else if(ny<-1e-6)room=Math.min(room,(margin-p.y)/ny);
   }
-  return Math.max(0,room);
- };
- const positive=available(1),negative=available(-1);
- const sign=positive>=negative?1:-1,amount=Math.min(50,Math.max(positive,negative));
- return {x:normal.x*sign*amount,y:normal.y*sign*amount};
+  room=Math.max(0,room);
+  const base=Math.min(a.x*nx+a.y*ny,b.x*nx+b.y*ny);
+  let edge=base;
+  for(const p of outline)edge=Math.max(edge,p.x*nx+p.y*ny);
+  const needed=Math.max(clearance,edge-base+clearance);
+  return {nx,ny,room,needed,fits:needed<=room};
+ });
+ // Prefer the nearest exterior side. If zoom leaves no exterior space,
+ // keep the annotation on screen on the side closest to clearing the model.
+ candidates.sort((a,b)=>Number(b.fits)-Number(a.fits)||
+  (a.fits?a.needed-b.needed:(a.needed-a.room)-(b.needed-b.room)));
+ const best=candidates[0],amount=Math.min(best.needed,best.room);
+ return {x:best.nx*amount,y:best.ny*amount};
+}
+function measurementScreenOutline(rect){
+ const outline=[];
+ for(const part of parts){
+  if(part.hidden||!visibleForMeasure(part.owner))continue;
+  const box=part.box;
+  for(const x of [box.min.x,box.max.x])
+   for(const y of [box.min.y,box.max.y])
+    for(const z of [box.min.z,box.max.z]){
+     const p=new THREE.Vector3(x,y,z).applyMatrix4(part.owner.matrixWorld);
+     const view=p.clone().applyMatrix4(camera.matrixWorldInverse);
+     if(view.z>=-camera.near)continue;
+     p.project(camera);
+     if(Number.isFinite(p.x)&&Number.isFinite(p.y))
+      outline.push({x:(p.x+1)*rect.width/2,y:(1-p.y)*rect.height/2});
+    }
+ }
+ return outline;
 }
 function autoPlaceMeasurement(){
  const draft=draftMeasurement,rect=renderer.domElement.getBoundingClientRect();
@@ -885,7 +910,7 @@ function autoPlaceMeasurement(){
   const p=point.clone().project(camera);
   return {x:(p.x+1)*rect.width/2,y:(1-p.y)*rect.height/2};
  });
- const offset=autoMeasureOffset(screen[0],screen[1],rect.width,rect.height);
+ const offset=autoMeasureOffset(screen[0],screen[1],rect.width,rect.height,measurementScreenOutline(rect));
  draft.offset.set(offset.x,offset.y);
  measurements.push(draft);
  draftMeasurement=null;
