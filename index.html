@@ -731,7 +731,7 @@ const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null;const 
 renderer.domElement.addEventListener('pointerdown',e=>{pointers.add(e.pointerId);if(e.button===0&&pointers.size===1)down={x:e.clientX,y:e.clientY,id:e.pointerId};else down=null;});
 renderer.domElement.addEventListener('pointermove',e=>{if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>5)down=null;});
 renderer.domElement.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);down=null;});
-renderer.domElement.addEventListener('pointerup',e=>{pointers.delete(e.pointerId);if(!down||down.id!==e.pointerId)return;down=null;if(measuring&&draftMeasurement){placeMeasurement(e.clientX,e.clientY);return;}const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(pointer,camera);const targets=parts.filter(p=>!p.hidden).flatMap(p=>p.meshes);const hits=ray.intersectObjects(targets,false);if(measuring){const hit=hits.find(h=>visibleForMeasure(h.object))||nearMeasureCorner(e.clientX,e.clientY);if(hit)addMeasurePoint(hit,e.clientX,e.clientY);return;}const p=hits[0]?.object.userData.part;if(moduleMode&&!activeModule){if(p?.module)enterModule(p.module);return;}const additive=e.shiftKey||e.ctrlKey||e.metaKey||multiToggle.checked;if(p)choose(!additive&&selection.size===1&&selection.has(p)?null:p,additive);else if(!additive)choose(null);});
+renderer.domElement.addEventListener('pointerup',e=>{pointers.delete(e.pointerId);if(!down||down.id!==e.pointerId)return;down=null;if(measuring&&draftMeasurement){placeMeasurement(e.clientX,e.clientY);return;}const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);ray.setFromCamera(pointer,camera);const targets=parts.filter(p=>!p.hidden).flatMap(p=>p.meshes);const hits=ray.intersectObjects(targets,false);if(measuring){const hit=hits.find(h=>visibleForMeasure(h.object))||nearMeasureCorner(e.clientX,e.clientY);if(hit)addMeasurePoint(hit,e.clientX,e.clientY,e.pointerType);return;}const p=hits[0]?.object.userData.part;if(moduleMode&&!activeModule){if(p?.module)enterModule(p.module);return;}const additive=e.shiftKey||e.ctrlKey||e.metaKey||multiToggle.checked;if(p)choose(!additive&&selection.size===1&&selection.has(p)?null:p,additive);else if(!additive)choose(null);});
 window.addEventListener('keydown', event => {
  if (event.key === 'Escape') choose(null);
  if (event.key !== ' ' || !selection.size || event.defaultPrevented || event.isComposing) return;
@@ -858,6 +858,40 @@ function moveDraftMeasurement(x,y,rect){
  draft.offset.x=x-rect.left-(1+end.x)*rect.width/2;
  draft.offset.y=y-rect.top-(1-end.y)*rect.height/2;
 }
+function autoMeasureOffset(a,b,width,height){
+ // Screen coordinates in CSS pixels; reserve space for arrows and the label.
+ const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy);
+ const normal=length>1?{x:-dy/length,y:dx/length}:{x:1,y:0};
+ const margin=24;
+ const available=sign=>{
+  const nx=normal.x*sign,ny=normal.y*sign;
+  let room=Infinity;
+  for(const p of [a,b]){
+   if(nx>1e-6)room=Math.min(room,(width-margin-p.x)/nx);
+   else if(nx<-1e-6)room=Math.min(room,(margin-p.x)/nx);
+   if(ny>1e-6)room=Math.min(room,(height-margin-p.y)/ny);
+   else if(ny<-1e-6)room=Math.min(room,(margin-p.y)/ny);
+  }
+  return Math.max(0,room);
+ };
+ const positive=available(1),negative=available(-1);
+ const sign=positive>=negative?1:-1,amount=Math.min(50,Math.max(positive,negative));
+ return {x:normal.x*sign*amount,y:normal.y*sign*amount};
+}
+function autoPlaceMeasurement(){
+ const draft=draftMeasurement,rect=renderer.domElement.getBoundingClientRect();
+ if(!draft)return;
+ const screen=draft.points.map(point=>{
+  const p=point.clone().project(camera);
+  return {x:(p.x+1)*rect.width/2,y:(1-p.y)*rect.height/2};
+ });
+ const offset=autoMeasureOffset(screen[0],screen[1],rect.width,rect.height);
+ draft.offset.set(offset.x,offset.y);
+ measurements.push(draft);
+ draftMeasurement=null;
+ measureText.textContent='Новий замір';
+ invalidate();
+}
 function placeMeasurement(x,y){
  moveDraftMeasurement(x,y,renderer.domElement.getBoundingClientRect());
  measurements.push(draftMeasurement);
@@ -910,9 +944,9 @@ function snappedMeasurePoint(hit,clientX,clientY){
  }
  return {point:corner||nearest||hit.point.clone(),kind:corner?'кут':nearest?'ребро':'поверхня'};
 }
-function addMeasurePoint(hit,x,y){if(measurePoints.length===2)resetMeasure();const result=snappedMeasurePoint(hit,x,y);if(measurePoints.length&&measurePoints[0].distanceTo(result.point)<0.00005){measureText.textContent='Виберіть іншу точку';return;}measurePoints.push(result.point);measureOwners.push(hit.object.userData.part);
+function addMeasurePoint(hit,x,y,pointerType){if(measurePoints.length===2)resetMeasure();const result=snappedMeasurePoint(hit,x,y);if(measurePoints.length&&measurePoints[0].distanceTo(result.point)<0.00005){measureText.textContent='Виберіть іншу точку';return;}measurePoints.push(result.point);measureOwners.push(hit.object.userData.part);
  const canvas=document.createElement('canvas');canvas.width=canvas.height=32;const ctx=canvas.getContext('2d');ctx.beginPath();ctx.arc(16,16,6,0,Math.PI*2);ctx.fillStyle='#000';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;const dot=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false,depthWrite:false,toneMapped:false}));dot.position.copy(result.point);dot.renderOrder=110;measureGroup.add(dot);
- if(measurePoints.length===2){const arrow=createMeasureArrow();measureGroup.add(arrow);measureText.textContent='Перемістіть олівець і натисніть для фіксації';measureValue.textContent=(measurePoints[0].distanceTo(measurePoints[1])*1000).toLocaleString('uk-UA',{maximumFractionDigits:1});const group=new THREE.Group();for(const child of [...measureGroup.children])group.add(child);scene.add(group);const label=measureValue.cloneNode(true);document.body.append(label);draftMeasurement={group,label,arrow,points:measurePoints.map(p=>p.clone()),owners:[...measureOwners],scope:activeModule,offset:new THREE.Vector2()};moveDraftMeasurement(x,y,renderer.domElement.getBoundingClientRect());measurePoints=[];measureOwners=[];measureValue.style.display='none';}else measureText.textContent='Точка 2 · '+result.kind;updateMeasureView();invalidate();}
+ if(measurePoints.length===2){const arrow=createMeasureArrow();measureGroup.add(arrow);measureText.textContent='Перемістіть олівець і натисніть для фіксації';measureValue.textContent=(measurePoints[0].distanceTo(measurePoints[1])*1000).toLocaleString('uk-UA',{maximumFractionDigits:1});const group=new THREE.Group();for(const child of [...measureGroup.children])group.add(child);scene.add(group);const label=measureValue.cloneNode(true);document.body.append(label);draftMeasurement={group,label,arrow,points:measurePoints.map(p=>p.clone()),owners:[...measureOwners],scope:activeModule,offset:new THREE.Vector2()};if(pointerType==='touch')autoPlaceMeasurement();else moveDraftMeasurement(x,y,renderer.domElement.getBoundingClientRect());measurePoints=[];measureOwners=[];measureValue.style.display='none';}else measureText.textContent='Точка 2 · '+result.kind;updateMeasureView();invalidate();}
 function updateMeasureView(){const rect=renderer.domElement.getBoundingClientRect();
  if (dirty) {
   pendingMeasureArrow.visible = false;
