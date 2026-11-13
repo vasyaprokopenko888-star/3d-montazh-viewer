@@ -860,11 +860,29 @@ function moveDraftMeasurement(x,y,rect){
 }
 function autoMeasureOffset(a,b,width,height,outline=[]){
  const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy);
- const normal=length>1?{x:-dy/length,y:dx/length}:{x:1,y:0};
- const margin=24,clearance=32;
+ const tx=length>1?dx/length:0,ty=length>1?dy/length:1;
+ const normal={x:-ty,y:tx},margin=24,clearance=24;
+ const maxOffset=Math.min(96,Math.min(width,height)*.24);
+ // Clip each projected panel to the strip alongside this measurement.
+ // Intersections of all corner pairs include the convex silhouette edges.
+ const intervals=[];
+ for(const panel of outline){
+  const points=panel.map(p=>({u:(p.x-a.x)*tx+(p.y-a.y)*ty,
+   v:(p.x-a.x)*normal.x+(p.y-a.y)*normal.y}));
+  const values=points.filter(p=>p.u>=-clearance&&p.u<=length+clearance).map(p=>p.v);
+  for(let i=0;i<points.length;i++)for(let j=i+1;j<points.length;j++){
+   const p=points[i],q=points[j];
+   if(Math.abs(q.u-p.u)<1e-9)continue;
+   for(const edge of [-clearance,length+clearance]){
+    const t=(edge-p.u)/(q.u-p.u);
+    if(t>=0&&t<=1)values.push(p.v+t*(q.v-p.v));
+   }
+  }
+  if(values.length)intervals.push([Math.min(...values)-clearance,Math.max(...values)+clearance]);
+ }
  const candidates=[1,-1].map(sign=>{
   const nx=normal.x*sign,ny=normal.y*sign;
-  let room=Infinity;
+  let room=maxOffset;
   for(const p of [a,b]){
    if(nx>1e-6)room=Math.min(room,(width-margin-p.x)/nx);
    else if(nx<-1e-6)room=Math.min(room,(margin-p.x)/nx);
@@ -872,24 +890,33 @@ function autoMeasureOffset(a,b,width,height,outline=[]){
    else if(ny<-1e-6)room=Math.min(room,(margin-p.y)/ny);
   }
   room=Math.max(0,room);
-  const base=Math.min(a.x*nx+a.y*ny,b.x*nx+b.y*ny);
-  let edge=base;
-  for(const p of outline)edge=Math.max(edge,p.x*nx+p.y*ny);
-  const needed=Math.max(clearance,edge-base+clearance);
-  return {nx,ny,room,needed,fits:needed<=room};
+  const blocked=intervals.map(([lo,hi])=>sign>0?[lo,hi]:[-hi,-lo]).sort((a,b)=>a[0]-b[0]);
+  let needed=32;
+  for(const [lo,hi] of blocked)if(lo<=needed&&hi>=needed)needed=hi+1;
+  const fits=needed<=room;
+  let amount=Math.min(needed,room);
+  if(!fits){
+   // If neither side can clear nearby panels, keep a compact offset and
+   // choose the least obstructed position instead of sending it far away.
+   const options=[Math.min(32,room),room];
+   for(const [lo,hi] of blocked)for(const v of [lo-1,hi+1])
+    if(v>=32&&v<=room)options.push(v);
+   const overlap=v=>blocked.filter(([lo,hi])=>v>=lo&&v<=hi).length;
+   options.sort((a,b)=>overlap(a)-overlap(b)||a-b);
+   amount=options[0];
+  }
+  const overlaps=blocked.filter(([lo,hi])=>amount>=lo&&amount<=hi).length;
+  return {nx,ny,amount,fits,overlaps};
  });
- // Prefer the nearest exterior side. If zoom leaves no exterior space,
- // keep the annotation on screen on the side closest to clearing the model.
- candidates.sort((a,b)=>Number(b.fits)-Number(a.fits)||
-  (a.fits?a.needed-b.needed:(a.needed-a.room)-(b.needed-b.room)));
- const best=candidates[0],amount=Math.min(best.needed,best.room);
- return {x:best.nx*amount,y:best.ny*amount};
+ candidates.sort((a,b)=>Number(b.fits)-Number(a.fits)||a.overlaps-b.overlaps||a.amount-b.amount);
+ const best=candidates[0];
+ return {x:best.nx*best.amount,y:best.ny*best.amount};
 }
 function measurementScreenOutline(rect){
  const outline=[];
  for(const part of parts){
   if(part.hidden||!visibleForMeasure(part.owner))continue;
-  const box=part.box;
+  const box=part.box,projected=[];
   for(const x of [box.min.x,box.max.x])
    for(const y of [box.min.y,box.max.y])
     for(const z of [box.min.z,box.max.z]){
@@ -898,8 +925,9 @@ function measurementScreenOutline(rect){
      if(view.z>=-camera.near)continue;
      p.project(camera);
      if(Number.isFinite(p.x)&&Number.isFinite(p.y))
-      outline.push({x:(p.x+1)*rect.width/2,y:(1-p.y)*rect.height/2});
+      projected.push({x:(p.x+1)*rect.width/2,y:(1-p.y)*rect.height/2});
     }
+  if(projected.length)outline.push(projected);
  }
  return outline;
 }
