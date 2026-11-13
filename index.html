@@ -152,8 +152,9 @@ $('empty').querySelector('p.muted').textContent='DAE, ZIP або папка пр
 $('tools').querySelectorAll('details p').forEach(p=>{if(p.textContent.includes('Текстури не завантажуються.'))p.textContent=p.textContent.replace('Текстури не завантажуються.','У режимі декорів використовуються вибрані локальні текстури.');});
 try {
 const THREE=await import('three');
-const [{OrbitControls},{ColladaLoader},{EffectComposer},{Pass,FullScreenQuad},{OutputPass},{mergeGeometries,mergeVertices}]=await Promise.all([
- import('three/addons/controls/OrbitControls.js'),import('three/addons/loaders/ColladaLoader.js'),import('three/addons/postprocessing/EffectComposer.js'),import('three/addons/postprocessing/Pass.js'),import('three/addons/postprocessing/OutputPass.js'),import('three/addons/utils/BufferGeometryUtils.js')]);
+const [{OrbitControls},{ColladaLoader},{EffectComposer},{Pass,FullScreenQuad},{OutputPass},{mergeGeometries,mergeVertices},{LineSegments2},{LineSegmentsGeometry},{LineMaterial}]=await Promise.all([
+ import('three/addons/controls/OrbitControls.js'),import('three/addons/loaders/ColladaLoader.js'),import('three/addons/postprocessing/EffectComposer.js'),import('three/addons/postprocessing/Pass.js'),import('three/addons/postprocessing/OutputPass.js'),import('three/addons/utils/BufferGeometryUtils.js'),
+ import('three/addons/lines/LineSegments2.js'),import('three/addons/lines/LineSegmentsGeometry.js'),import('three/addons/lines/LineMaterial.js')]);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.outputColorSpace=THREE.SRGBColorSpace;
 $('viewport').appendChild(renderer.domElement);
@@ -239,6 +240,24 @@ const labelMat=new THREE.MeshBasicMaterial({color:0x253c36,side:THREE.DoubleSide
 const unknownMat=new THREE.MeshStandardMaterial({color:0x969c90,roughness:.85,side:THREE.DoubleSide});
 const edgeMat=new THREE.LineBasicMaterial({color:0x1b1e19,depthWrite:false});const serviceLineMat=new THREE.LineBasicMaterial({color:0x344d44});const otherLineMat=new THREE.LineBasicMaterial({color:0x858b7e});
 selectedMat.alphaHash=true;selectedMat.opacity=panelMat.opacity;selectedMat.onBeforeCompile=panelMat.onBeforeCompile;selectedMat.customProgramCacheKey=()=> 'assembly-selected-temporal-hash-v1';
+function smoothOutlineMaterial(color, opacity) {
+ const material = new LineMaterial({
+  color, opacity, linewidth: 2.25, transparent: true, depthWrite: false,
+  polygonOffset: true, polygonOffsetFactor: 0, polygonOffsetUnits: -1
+ });
+ material.onBeforeCompile = shader => {
+  shader.fragmentShader = shader.fragmentShader.replace(
+   'gl_FragColor = vec4( diffuseColor.rgb, alpha );',
+   `float distanceToAxis = length(vec2(vUv.x, max(abs(vUv.y) - 1.0, 0.0)));
+    float feather = clamp(0.5 * fwidth(distanceToAxis), 0.01, 0.44);
+    float coverage = 1.0 - smoothstep(0.54 - feather, 0.54 + feather, distanceToAxis);
+    gl_FragColor = vec4(diffuseColor.rgb, alpha * coverage);`
+  );
+ };
+ return material;
+}
+const outlineMat = smoothOutlineMaterial(0x30352f, .9);
+const xrayOutlineMat = smoothOutlineMaterial(0x232720, .94);
 const xrayEdgeMat = new THREE.LineBasicMaterial({color:0x11130f,transparent:true,opacity:.96,depthWrite:false});
 const xrayServiceLineMat = new THREE.LineBasicMaterial({
  color: 0x20221d, transparent: true, opacity: .85, depthWrite: false
@@ -267,7 +286,7 @@ const xrayPanelMat = new THREE.MeshBasicMaterial({
 const xraySelectedMat = new THREE.MeshBasicMaterial({
  color: 0xcd946e, side: THREE.DoubleSide, transparent: true, depthWrite: false
 });
-const shared=new Set([panelMat,selectedMat,xrayPanelMat,xraySelectedMat,hardwareMat,labelMat,unknownMat,edgeMat,xrayEdgeMat,serviceLineMat,xrayServiceLineMat,otherLineMat,hardwareViewPanel,hardwareViewSelected,hardwareViewMetal]);
+const shared=new Set([panelMat,selectedMat,xrayPanelMat,xraySelectedMat,hardwareMat,labelMat,unknownMat,edgeMat,xrayEdgeMat,serviceLineMat,xrayServiceLineMat,otherLineMat,outlineMat,xrayOutlineMat,hardwareViewPanel,hardwareViewSelected,hardwareViewMetal]);
 let printButton=null,printPreparing=false;
 let root=null,parts=[],selected=null,others=[],fileName='',counts={},loading=false,lastChange=0,dirty=true,settledFrames=0;
 let moduleMode=false,activeModule=null,moduleSnapshot=null,modules=[];
@@ -470,7 +489,11 @@ function showMaterials(){materialInfo.replaceChildren();if(selection.size>1){mat
 function applyMode(){
  const xray = xrayMode.checked;
  for (const part of parts) {
-  if (part.edge) part.edge.material = xray ? xrayEdgeMat : edgeMat;
+  if (part.edge) {
+   part.edge.material = part.edgePositions
+    ? (xray ? xrayOutlineMat : outlineMat)
+    : (xray ? xrayEdgeMat : edgeMat);
+  }
   // Keep transparent layers from swapping order as the camera turns.
   for (const [index, mesh] of part.meshes.entries()) {
    mesh.renderOrder = xray
@@ -547,7 +570,7 @@ async function prepare(model,names){model.userData.moduleLookupRoot=true;model.u
  // Merge a panel's triangle soup first. EdgesGeometry welds positions and suppresses coplanar seams.
  for(const p of result){const inv=p.owner.matrixWorld.clone().invert(),chunks=[];let vertices=0;
  for(const m of p.meshes){let g=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();for(const key of Object.keys(g.attributes))if(key!=='position')g.deleteAttribute(key);g.clearGroups();g.applyMatrix4(inv.clone().multiply(m.matrixWorld));vertices+=g.attributes.position.count;chunks.push(g);}
- if(vertices<600000){const merged=mergeGeometries(chunks,false);if(merged){const welded=mergeVertices(merged,1e-5);const eg=technicalEdges(welded);const edge=new THREE.LineSegments(eg,edgeMat);edge.renderOrder=2;edge.visible=$('edges').checked;edge.layers.set(annotationLayer);p.owner.add(edge);p.edge=edge;merged.dispose();welded.dispose();}}
+ if(vertices<600000){const merged=mergeGeometries(chunks,false);if(merged){const welded=mergeVertices(merged,1e-5);const eg=technicalEdges(welded);p.edgePositions=eg.getAttribute("position");const geometry=new LineSegmentsGeometry().setPositions(p.edgePositions.array);eg.dispose();const edge=new LineSegments2(geometry,xrayMode.checked?xrayOutlineMat:outlineMat);edge.renderOrder=2;edge.visible=$('edges').checked;edge.layers.set(annotationLayer);p.owner.add(edge);p.edge=edge;merged.dispose();welded.dispose();}}
  else {const edge=new THREE.Box3Helper(p.box,edgeMat.color);edge.renderOrder=2;edge.material.dispose();edge.material=edgeMat;p.owner.add(edge);p.edge=edge;edge.visible=$('edges').checked;edge.layers.set(annotationLayer);}
  chunks.forEach(g=>g.dispose());if(p.id%15===0){$('busy').textContent=`Контури панелей: ${p.id+1} / ${result.length}…`;await tick();}}
  batchLines(model,lines,ownerMap);model.userData.sourceResources=[...oldMats];result.sort((a,b)=>a.name.localeCompare(b.name,'uk',{numeric:true}));result.forEach((p,i)=>p.id=i);return result;}
@@ -867,9 +890,9 @@ function snappedMeasurePoint(hit,clientX,clientY){
    if (surface) center = surface.point;
   }
  }
- if (!edge?.isLineSegments) return {point:center||hit.point.clone(),kind:center?'центр поверхні':'поверхня'};
+ if (!edge || !(part.edgePositions || edge.isLineSegments)) return {point:center||hit.point.clone(),kind:center?'центр поверхні':'поверхня'};
  edge.updateWorldMatrix(true,false);
- const pos=edge.geometry.attributes.position;
+ const pos=part.edgePositions||edge.geometry.attributes.position;
  let corner=null,cornerDistance=36,nearest=null,edgeDistance=11;
  for(let i=0;i+1<pos.count;i+=2){const a=new THREE.Vector3().fromBufferAttribute(pos,i).applyMatrix4(edge.matrixWorld),b=new THREE.Vector3().fromBufferAttribute(pos,i+1).applyMatrix4(edge.matrixWorld),sa=screen(a),sb=screen(b);
  for(const [p,sp] of [[a,sa],[b,sb]]){const d=sp.distanceTo(click);if(d<cornerDistance&&p.distanceTo(hit.point)<limit){corner=p;cornerDistance=d;}}
@@ -931,7 +954,7 @@ function updateMeasureView(){const rect=renderer.domElement.getBoundingClientRec
   m.label.style.transform='translate(-50%,-100%) rotate('+angle+'rad)';
  }
 }
-function nearMeasureCorner(x,y){const rect=renderer.domElement.getBoundingClientRect();let best=null,distance=36,depth=Infinity;for(const p of parts){if(p.hidden||!p.meshes.some(visibleForMeasure)||!p.edge?.isLineSegments)continue;const edge=p.edge;edge.updateWorldMatrix(true,false);const pos=edge.geometry.attributes.position;for(let i=0;i<pos.count;i++){const point=new THREE.Vector3().fromBufferAttribute(pos,i).applyMatrix4(edge.matrixWorld),q=point.clone().project(camera);if(Math.abs(q.z)>1)continue;const d=Math.hypot(rect.left+(q.x+1)*rect.width/2-x,rect.top+(1-q.y)*rect.height/2-y);if(d<distance-.5||(Math.abs(d-distance)<.5&&q.z<depth)){best={point,object:p.meshes.find(visibleForMeasure)};distance=d;depth=q.z;}}}return best;}
+function nearMeasureCorner(x,y){const rect=renderer.domElement.getBoundingClientRect();let best=null,distance=36,depth=Infinity;for(const p of parts){if(p.hidden||!p.meshes.some(visibleForMeasure)||!(p.edgePositions||p.edge?.isLineSegments))continue;const edge=p.edge;edge.updateWorldMatrix(true,false);const pos=p.edgePositions||edge.geometry.attributes.position;for(let i=0;i<pos.count;i++){const point=new THREE.Vector3().fromBufferAttribute(pos,i).applyMatrix4(edge.matrixWorld),q=point.clone().project(camera);if(Math.abs(q.z)>1)continue;const d=Math.hypot(rect.left+(q.x+1)*rect.width/2-x,rect.top+(1-q.y)*rect.height/2-y);if(d<distance-.5||(Math.abs(d-distance)<.5&&q.z<depth)){best={point,object:p.meshes.find(visibleForMeasure)};distance=d;depth=q.z;}}}return best;}
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&measuring){measuring=false;resetMeasure();measureIcon.setAttribute('aria-pressed','false');}});
 
 function syncPanelTools(){
