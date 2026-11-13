@@ -189,11 +189,16 @@ scene.add(sun);
 // Independent temporal transparency samples, averaged in LINEAR color space.
 // Unlike a fixed spatial hash, the grain actually changes between samples and cancels out.
 const transparencyFrame={value:0};
+// The canvas antialias option does not cover the composer's offscreen buffers.
+const gl=renderer.getContext();
+const colorSamples=new Set(gl.getInternalformatParameter(gl.RENDERBUFFER,gl.RGBA16F,gl.SAMPLES));
+const depthSamples=gl.getInternalformatParameter(gl.RENDERBUFFER,gl.DEPTH_COMPONENT24,gl.SAMPLES);
+const lineSamples=Math.max(0,...Array.from(depthSamples).filter(n=>n<=4&&colorSamples.has(n)));
 const halton=(i,base)=>{let f=1,v=0;while(i>0){f/=base;v+=f*(i%base);i=Math.floor(i/base);}return v;};
 class CleanTransparencyPass extends Pass {
  constructor(){super();this.accumulate=false;this.samples=0;this.width=1;this.height=1;this.holdUntilSamples=0;
   const options={type:THREE.HalfFloatType,depthBuffer:false};
-  this.sample=new THREE.WebGLRenderTarget(1,1,{...options,depthBuffer:true});this.history=new THREE.WebGLRenderTarget(1,1,options);this.next=new THREE.WebGLRenderTarget(1,1,options);this.hold=new THREE.WebGLRenderTarget(1,1,{...options,depthBuffer:true});
+  this.sample=new THREE.WebGLRenderTarget(1,1,{...options,depthBuffer:true});this.history=new THREE.WebGLRenderTarget(1,1,options);this.next=new THREE.WebGLRenderTarget(1,1,options);this.hold=new THREE.WebGLRenderTarget(1,1,{...options,depthBuffer:true,samples:lineSamples,resolveDepthBuffer:false});
   this.mix=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{current:{value:null},history:{value:null},weight:{value:1}},vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',fragmentShader:'uniform sampler2D current;uniform sampler2D history;uniform float weight;varying vec2 vUv;void main(){vec4 c=texture2D(current,vUv);if(weight>=1.0){gl_FragColor=c;}else{gl_FragColor=mix(texture2D(history,vUv),c,weight);}}'});this.quad=new FullScreenQuad(this.mix);
  }
  reset(){this.samples=0;}
@@ -208,7 +213,11 @@ class CleanTransparencyPass extends Pass {
  }
  dispose(){for(const rt of [this.sample,this.history,this.next,this.hold])rt.dispose();this.mix.dispose();this.quad.dispose();}
 }
-const composer=new EffectComposer(renderer);const taa=new CleanTransparencyPass();composer.addPass(taa);composer.addPass(new OutputPass());
+const composer=new EffectComposer(renderer);
+composer.renderTarget1.samples=lineSamples;
+composer.renderTarget2.samples=lineSamples;
+composer.renderTarget1.resolveDepthBuffer=false;
+composer.renderTarget2.resolveDepthBuffer=false;const taa=new CleanTransparencyPass();composer.addPass(taa);composer.addPass(new OutputPass());
 // Shared materials: opaque service geometry NEVER receives the panel opacity.
 const panelMat=new THREE.MeshStandardMaterial({color:0xcac4b4,roughness:.9,metalness:0,alphaHash:true,transparent:false,opacity:.44,side:THREE.DoubleSide,depthWrite:true,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
 panelMat.onBeforeCompile=shader=>{shader.uniforms.transparencyFrame=transparencyFrame;shader.fragmentShader='uniform float transparencyFrame;\n'+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace('#include <alphahash_fragment>',`
