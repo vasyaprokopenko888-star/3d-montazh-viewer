@@ -180,7 +180,7 @@ function fitModelGround(model) {
  modelGround.visible = true;
 }
 const camera=new THREE.PerspectiveCamera(38,1,.001,1000);
-const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.12;
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.09;
 const touchRotation=matchMedia('(pointer:coarse)');const updateRotationSpeed=()=>{controls.rotateSpeed=touchRotation.matches?.35:1;};updateRotationSpeed();touchRotation.addEventListener('change',updateRotationSpeed);
 scene.add(new THREE.HemisphereLight(0xffffff, 0xa0a292, 1.9));
 const sun = new THREE.DirectionalLight(0xffffff, 1.9);
@@ -375,8 +375,17 @@ function frame(now){requestAnimationFrame(frame);controls.update();updateDimensi
   dirty = false;
   return;
  }
+ if (motionOpaque) {
+  transparencyFrame.value = 0;
+  renderer.setRenderTarget(null);
+  renderer.render(scene, camera);
+  const status = 'Рух: панелі тимчасово непрозорі';
+  if (smoothProgress.textContent !== status) smoothProgress.textContent = status;
+  dirty = false;
+  return;
+ }
  const idle=now-lastChange>180;taa.holdUntilSamples=$('smooth').checked?Number(quality.value):0;
- if($('smooth').checked&&idle&&!motionOpaque){taa.accumulate=true;composer.render();const target=Number(quality.value);smoothProgress.textContent=taa.samples>=target?'Згладжено · прозорість відновлено':'Підготовка прозорого кадру: '+Math.round(taa.samples/target*100)+'%';if(taa.samples>=target)dirty=false;}else{taa.accumulate=false;composer.render();smoothProgress.textContent=motionOpaque?'Рух: панелі тимчасово непрозорі':$('smooth').checked?'Панелі непрозорі · підготовка згладжування…':'Згладжування вимкнено';if(!$('smooth').checked&&!motionOpaque)dirty=false;}
+ if($('smooth').checked&&idle){taa.accumulate=true;composer.render();const target=Number(quality.value);smoothProgress.textContent=taa.samples>=target?'Згладжено · прозорість відновлено':'Підготовка прозорого кадру: '+Math.round(taa.samples/target*100)+'%';if(taa.samples>=target)dirty=false;}else{taa.accumulate=false;composer.render();smoothProgress.textContent=$('smooth').checked?'Панелі непрозорі · підготовка згладжування…':'Згладжування вимкнено';if(!$('smooth').checked)dirty=false;}
 }requestAnimationFrame(frame);
 function displayName(o){return (o.userData.sourceName||o.name||'Без назви').replace(/^_+/,'').replace(/_+/g,' ').replace(/\.(?=\S)/g,'. ').trim();}
 function localBounds(owner,meshes){owner.updateWorldMatrix(true,false);const inv=owner.matrixWorld.clone().invert();const box=new THREE.Box3();const p=new THREE.Vector3();
