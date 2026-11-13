@@ -557,15 +557,7 @@ async function prepare(model,names){model.userData.moduleLookupRoot=true;model.u
  for (const mesh of meshes) {
   if (!mesh.userData.hardware || mesh.userData.part || !mesh.geometry.getAttribute('position')) continue;
   if (!hardwareEdges.has(mesh.geometry)) {
-   const positions = mesh.geometry.clone();
-   for (const name of Object.keys(positions.attributes)) {
-    if (name !== 'position') positions.deleteAttribute(name);
-   }
-   positions.morphAttributes = {};
-   const welded = mergeVertices(positions, 1e-5);
-   const geometry = technicalEdges(welded);
-   welded.dispose();
-   positions.dispose();
+   const geometry = new THREE.EdgesGeometry(mesh.geometry, 35);
    const hasEdges = geometry.getAttribute('position').count > 0;
    hardwareEdges.set(mesh.geometry, hasEdges ? geometry : null);
    if (!hasEdges) geometry.dispose();
