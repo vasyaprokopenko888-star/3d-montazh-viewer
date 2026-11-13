@@ -348,10 +348,16 @@ mobileSelection.addEventListener('change',()=>{
  invalidate();
 });
 controls.addEventListener('change',()=>{lastCameraMotion=performance.now();invalidate();});
-function resize(){const el=$('viewport');const ratio=Math.min(Math.max(devicePixelRatio,1.5),2,Math.sqrt(3000000/Math.max(1,el.clientWidth*el.clientHeight)));renderer.setPixelRatio(ratio);renderer.setSize(el.clientWidth,el.clientHeight);composer.setPixelRatio(ratio);composer.setSize(el.clientWidth,el.clientHeight);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix();invalidate();}
+let restingPixelRatio = 1;
+function updateMotionResolution() {
+ const interactiveRatio = Math.min(restingPixelRatio, 1, restingPixelRatio * .8);
+ const ratio = motionOpaque && !printPreparing ? interactiveRatio : restingPixelRatio;
+ if (renderer.getPixelRatio() !== ratio) renderer.setPixelRatio(ratio);
+}
+function resize(){const el=$('viewport');const ratio=restingPixelRatio=Math.min(Math.max(devicePixelRatio,1.5),2,Math.sqrt(3000000/Math.max(1,el.clientWidth*el.clientHeight)));updateMotionResolution();renderer.setSize(el.clientWidth,el.clientHeight);composer.setPixelRatio(ratio);composer.setSize(el.clientWidth,el.clientHeight);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix();invalidate();}
 quality.onchange=invalidate;
 new ResizeObserver(resize).observe($('viewport'));
-function frame(now){requestAnimationFrame(frame);controls.update();updateDimensionLabelAngles();updateMeasureView();const moving=performance.now()-lastCameraMotion<180;if(moving!==motionOpaque){motionOpaque=moving;syncPanelOpacity();invalidate();}if(!dirty)return;
+function frame(now){requestAnimationFrame(frame);controls.update();updateDimensionLabelAngles();updateMeasureView();const moving=performance.now()-lastCameraMotion<180;if(moving!==motionOpaque){motionOpaque=moving;updateMotionResolution();syncPanelOpacity();invalidate();}if(!dirty)return;
  if (hardwareView.checked) {
   const dimensions = [moduleDimensions, kitchenDimensions, wardrobeDimensions];
   const visibility = dimensions.map(group => group.visible);
