@@ -267,7 +267,10 @@ const xrayPanelMat = new THREE.MeshBasicMaterial({
 const xraySelectedMat = new THREE.MeshBasicMaterial({
  color: 0xcd946e, side: THREE.DoubleSide, transparent: true, depthWrite: false
 });
-const shared=new Set([panelMat,selectedMat,xrayPanelMat,xraySelectedMat,hardwareMat,labelMat,unknownMat,edgeMat,xrayEdgeMat,serviceLineMat,xrayServiceLineMat,otherLineMat,hardwareViewPanel,hardwareViewSelected,hardwareViewMetal]);
+const hardwareEdgeMat = new THREE.LineBasicMaterial({
+ color: 0x39423e, transparent: true, opacity: .48, depthWrite: false
+});
+const shared=new Set([hardwareEdgeMat,panelMat,selectedMat,xrayPanelMat,xraySelectedMat,hardwareMat,labelMat,unknownMat,edgeMat,xrayEdgeMat,serviceLineMat,xrayServiceLineMat,otherLineMat,hardwareViewPanel,hardwareViewSelected,hardwareViewMetal]);
 let printButton=null,printPreparing=false;
 let root=null,parts=[],selected=null,others=[],fileName='',counts={},loading=false,lastChange=0,dirty=true,settledFrames=0;
 let moduleMode=false,activeModule=null,moduleSnapshot=null,modules=[];
@@ -550,6 +553,22 @@ async function prepare(model,names){model.userData.moduleLookupRoot=true;model.u
  if(vertices<600000){const merged=mergeGeometries(chunks,false);if(merged){const welded=mergeVertices(merged,1e-5);const eg=technicalEdges(welded);const edge=new THREE.LineSegments(eg,edgeMat);edge.renderOrder=2;edge.visible=$('edges').checked;edge.layers.set(annotationLayer);p.owner.add(edge);p.edge=edge;merged.dispose();welded.dispose();}}
  else {const edge=new THREE.Box3Helper(p.box,edgeMat.color);edge.renderOrder=2;edge.material.dispose();edge.material=edgeMat;p.owner.add(edge);p.edge=edge;edge.visible=$('edges').checked;edge.layers.set(annotationLayer);}
  chunks.forEach(g=>g.dispose());if(p.id%15===0){$('busy').textContent=`Контури панелей: ${p.id+1} / ${result.length}…`;await tick();}}
+ const hardwareEdges = new Map();
+ for (const mesh of meshes) {
+  if (!mesh.userData.hardware || mesh.userData.part || !mesh.geometry.getAttribute('position')) continue;
+  if (!hardwareEdges.has(mesh.geometry)) {
+   const geometry = new THREE.EdgesGeometry(mesh.geometry, 35);
+   const hasEdges = geometry.getAttribute('position').count > 0;
+   hardwareEdges.set(mesh.geometry, hasEdges ? geometry : null);
+   if (!hasEdges) geometry.dispose();
+  }
+  const geometry = hardwareEdges.get(mesh.geometry);
+  if (!geometry) continue;
+  const outline = new THREE.LineSegments(geometry, hardwareEdgeMat);
+  outline.userData.hardwareOutline = true;
+  outline.renderOrder = 2;
+  mesh.add(outline);
+ }
  batchLines(model,lines,ownerMap);model.userData.sourceResources=[...oldMats];result.sort((a,b)=>a.name.localeCompare(b.name,'uk',{numeric:true}));result.forEach((p,i)=>p.id=i);return result;}
 async function install(model,name,names){let next;try{next=await prepare(model,names);}catch(e){disposeTree(model);throw e;}if(!counts.mesh){disposeTree(model);throw Error('DAE не містить поверхонь для відображення.');}
  if(root){scene.remove(root);disposeTree(root);}isolatedExtras.clear();isolated=false;activeRemote=null;activeShare=null;if(location.protocol!=='file:'){const cleanUrl=new URL(location.href);cleanUrl.search='';cleanUrl.hash='';history.replaceState(null,'',cleanUrl);}clearAllMeasurements();resetModuleState();panelSearch.value='';root=model;parts=next;selected=null;selection.clear();fileName=name;others=[];viewDirection.set(1,.7,1.35).normalize();let savedCamera=null;root.traverse(o=>{if(o.isCamera)savedCamera=o;if(o.userData.otherLine){others.push(o);o.visible=$('extra-lines').checked;}});if(savedCamera){savedCamera.getWorldDirection(viewDirection).negate().normalize();}scene.add(root);
@@ -632,11 +651,12 @@ xrayMode.onchange = () => {
  applyMode();
 };
 $('opacity').oninput=()=>{syncPanelOpacity();$('opacity-value').textContent=$('opacity').value+'%';invalidate();};
-$('edges').onchange=()=>{parts.forEach(p=>{if(p.edge)p.edge.visible=!p.hidden&&$('edges').checked;});invalidate();};$('smooth').onchange=invalidate;$('extra-lines').onchange=()=>{others.forEach(o=>{if(isolatedExtras.has(o))isolatedExtras.set(o,$('extra-lines').checked);else o.visible=$('extra-lines').checked;});invalidate();};
+hardwareEdgeMat.visible = $('edges').checked;
+$('edges').onchange=()=>{hardwareEdgeMat.visible=$('edges').checked;parts.forEach(p=>{if(p.edge)p.edge.visible=!p.hidden&&$('edges').checked;});invalidate();};$('smooth').onchange=invalidate;$('extra-lines').onchange=()=>{others.forEach(o=>{if(isolatedExtras.has(o))isolatedExtras.set(o,$('extra-lines').checked);else o.visible=$('extra-lines').checked;});invalidate();};
 $('parts').onchange=()=>choose($('parts').value===''?null:parts[Number($('parts').value)],multiToggle.checked);
 function setHidden(p,value){p.hidden=value;[...p.meshes,...p.attached].forEach(o=>o.visible=!value);if(p.edge)p.edge.visible=!value&&$('edges').checked;}
 function restoreExtras(){for(const [o,visible] of isolatedExtras)o.visible=visible;isolatedExtras.clear();isolated=false;}
-function isolateSelected(){if(!selection.size||!root)return;restoreExtras();const allowed=new Set();for(const p of parts){setHidden(p,!selection.has(p));if(selection.has(p)){for(const o of [...p.meshes,...p.attached,p.edge])if(o)allowed.add(o);}}root.traverse(o=>{if((o.isMesh||o.isLine||o.isPoints||o.isSprite)&&!allowed.has(o)&&!o.userData.part){isolatedExtras.set(o,o.visible);o.visible=false;}});isolated=true;refresh();invalidate();}
+function isolateSelected(){if(!selection.size||!root)return;restoreExtras();const allowed=new Set();for(const p of parts){setHidden(p,!selection.has(p));if(selection.has(p)){for(const o of [...p.meshes,...p.attached,p.edge])if(o)allowed.add(o);}}root.traverse(o=>{if((o.isMesh||o.isLine||o.isPoints||o.isSprite)&&!allowed.has(o)&&!o.userData.part&&!o.userData.hardwareOutline){isolatedExtras.set(o,o.visible);o.visible=false;}});isolated=true;refresh();invalidate();}
 $('isolate').onclick=isolateSelected;
 $('hide').onclick=()=>{const chosen=[...selection];choose(null);chosen.forEach(p=>setHidden(p,true));refresh();invalidate();};
 $('restore').onclick=()=>{restoreExtras();parts.forEach(p=>setHidden(p,false));refresh();invalidate();};$('all').onclick=()=>{restoreExtras();choose(null);parts.forEach(p=>setHidden(p,false));refresh();fit();};$('fit').onclick=fit;$('settings').onclick=()=>$('tools').classList.toggle('open');
@@ -1141,7 +1161,7 @@ function resetModuleState(){resetWardrobe();clearKitchenDimensions();clearModule
 function discoverModules(){modules=[];for(const p of parts){const owner=findModuleOwner(p.owner);if(!owner){p.module=null;continue;}let mod=modules.find(m=>m.owner===owner);if(!mod){mod={owner,name:displayName(owner),panels:[]};modules.push(mod);}mod.panels.push(p);p.module=mod;}for(const m of modules){const box=localBounds(m.owner,m.panels.flatMap(p=>p.meshes));const raw=box.getSize(new THREE.Vector3()).toArray(),e=m.owner.matrixWorld.elements;const scale=[Math.hypot(e[0],e[1],e[2]),Math.hypot(e[4],e[5],e[6]),Math.hypot(e[8],e[9],e[10])];const up=[Math.abs(e[1]/scale[0]),Math.abs(e[5]/scale[1]),Math.abs(e[9]/scale[2])];const height=up.indexOf(Math.max(...up)),horizontal=[0,1,2].filter(i=>i!==height);m.dimensionBox=box;m.dimensionScale=scale;m.dimensionAxes=[horizontal[0],height,horizontal[1]];m.size=m.dimensionAxes.map(i=>Math.round(raw[i]*scale[i]*1000));}}
 function belongsToModule(o,mod){return o.userData.moduleOwner===mod.owner||findModuleOwner(o)===mod.owner;}
 function updateModuleUI(){if(typeof moduleSwitch==='undefined')return;kitchenDimensions.visible=moduleMode&&!activeModule;moduleSwitch.disabled=!modules.length;moduleSwitch.textContent=moduleMode?'Модулі: увімкнено':'Режим модулів'+(modules.length?' ('+modules.length+')':' — груп не знайдено');moduleSwitch.setAttribute('aria-pressed',String(moduleMode));moduleBar.hidden=!moduleMode;moduleBack.hidden=!activeModule;
- if(activeModule){moduleInfo.textContent=activeModule.name;moduleInfo.title='Габарити всіх панелей модуля, включно з фасадами, без фурнітури';for(const p of parts)if(p.module!==activeModule)setHidden(p,true);root?.traverse(o=>{if((o.isMesh||o.isLine||o.isPoints)&&!belongsToModule(o,activeModule))o.visible=false;});}else moduleInfo.textContent='Натисніть на панель потрібного модуля';}
+ if(activeModule){moduleInfo.textContent=activeModule.name;moduleInfo.title='Габарити всіх панелей модуля, включно з фасадами, без фурнітури';for(const p of parts)if(p.module!==activeModule)setHidden(p,true);root?.traverse(o=>{if((o.isMesh||o.isLine||o.isPoints)&&!o.userData.hardwareOutline&&!belongsToModule(o,activeModule))o.visible=false;});}else moduleInfo.textContent='Натисніть на панель потрібного модуля';}
 moduleSwitch.onclick=()=>{resetWardrobe();if(activeModule)leaveModule();moduleMode=!moduleMode;if(moduleMode)drawKitchenDimensions();updateModuleUI();invalidate();};
 function enterModule(mod){resetMeasure();if(!root||activeModule)return;const visibility=new Map();root.traverse(o=>visibility.set(o,o.visible));moduleSnapshot={visibility,hidden:parts.map(p=>p.hidden),selected:[...selection],camera:camera.position.clone(),target:controls.target.clone(),near:camera.near,far:camera.far,min:controls.minDistance,max:controls.maxDistance,extras:new Map(isolatedExtras),isolated};choose(null);activeModule=mod;moduleMode=true;for(const p of parts)setHidden(p,p.module!==mod);refresh();fit();drawModuleDimensions(mod);}
 function leaveModule(){resetMeasure();if(!moduleSnapshot)return;clearModuleDimensions();choose(null);const snapshot=moduleSnapshot;activeModule=null;moduleSnapshot=null;parts.forEach((p,i)=>p.hidden=snapshot.hidden[i]);for(const [o,v] of snapshot.visibility)o.visible=v;isolatedExtras.clear();for(const [o,v] of snapshot.extras)isolatedExtras.set(o,v);isolated=snapshot.isolated;camera.position.copy(snapshot.camera);controls.target.copy(snapshot.target);camera.near=snapshot.near;camera.far=snapshot.far;controls.minDistance=snapshot.min;controls.maxDistance=snapshot.max;camera.updateProjectionMatrix();controls.update();for(const p of snapshot.selected)choose(p,true);refresh();invalidate();}
