@@ -688,8 +688,11 @@ function planAdditionalDayOff(data,day){
   let meta=next.find(o=>o.id===DAY_NOTES_ID);
   if(!meta){meta={id:DAY_NOTES_ID,title:'Примітки календаря',status:'cancelled',stages:[],dayNotes:{}};next.push(meta)}
   meta.daysOff??={};meta.daysOff[day]=true;
-  for(const order of next){
-    if(!order.stages.some(s=>busy(order,s)&&s.start<=day&&s.end>=day))continue;
+  const scopeKey=o=>o.groupName?.trim()?'group:'+groupKey(o.groupName):'order:'+o.id;
+  const affected=new Set(scheduleOrders(data).filter(o=>o.stages.some(s=>busy(o,s)&&s.start<=day&&s.end>=day)).map(scopeKey));
+  // Schedule records include either the active parent plan or its separate member plans, never both.
+  for(const order of scheduleOrders(next)){
+    if(!affected.has(scopeKey(order)))continue;
     const tasks=order.stages.filter(s=>busy(order,s)&&s.end>=day);
     const last=tasks.map(s=>s.end).sort().at(-1),mapping=new Map();
     let target=nextWorkDay(day,next);
