@@ -682,42 +682,56 @@ function card(o){return `<article class="card"><div class="tools"><span class="t
 function renderOrders(archive=false){if(parentView&&parentView.archive===archive){renderParentOrder();return} $('#content').innerHTML='<div class="tools"><h2>'+(archive?'Архів замовлень':'Замовлення')+'</h2><button id="groupOrders">Об’єднати замовлення</button><input id="search" placeholder="Пошук клієнта, назви, адреси" aria-label="Пошук" style="max-width:340px"></div><div class="grid" id="orderList"></div>';function list(q=''){const items=orders.filter(o=>o.id!==DAY_NOTES_ID&&!o.standalone&&Boolean(o.archived)===archive).filter(o=>[o.title,o.client,o.address,o.groupName].join(' ').toLowerCase().includes(q.toLowerCase()));$('#orderList').innerHTML=groupedOrderCards(items)||'<div class="empty">'+(archive?'В архіві поки немає замовлень. Виконані замовлення можна перенести сюди кнопкою «В архів».':'Замовлень поки немає. Додай перше кнопкою вгорі.')+'</div>';bindEdits();bindParentCards()}list();$('#groupOrders').onclick=openGroupDialog;$('#search').oninput=e=>list(e.target.value)}
 function taskRows(tasks,day=null){return tasks.map(({o,s})=>`<div class="task"><div><div class="task-heading"><span class="task-person ${s.person}">${people[s.person]}</span><span class="task-separator">·</span><b>${esc(s.name)}</b></div><div>${esc(o.title)}</div><small>${esc(s.start)} — ${esc(s.end)} ${s.from?esc(s.from)+'–'+esc(s.to):'· увесь день'} ${s.done?'· виконано':''}</small></div><div class="row"><button data-order="${esc(o.id)}" data-stage="${esc(s.id)}" ${day?`data-workday="${day}"`: ''}>Редагувати</button>${day&&!s.done&&s.person!=='wait'?`<button class="danger" data-remove-workday="${day}" data-remove-order="${esc(o.id)}" data-remove-stage="${esc(s.id)}">Скоротити на цей день</button>`:''}</div></div>`).join('')||'<div class="empty">Запланованих робіт немає — день вільний.</div>'}
 let selectedDay=today;
+function planAdditionalDayOff(data,day){
+  const next=structuredClone(data),changes=[];
+  if(isDayOff(day,data))return {next,changes};
+  let meta=next.find(o=>o.id===DAY_NOTES_ID);
+  if(!meta){meta={id:DAY_NOTES_ID,title:'Примітки календаря',status:'cancelled',stages:[],dayNotes:{}};next.push(meta)}
+  meta.daysOff??={};meta.daysOff[day]=true;
+  for(const order of next){
+    if(!order.stages.some(s=>busy(order,s)&&s.start<=day&&s.end>=day))continue;
+    const tasks=order.stages.filter(s=>busy(order,s)&&s.end>=day);
+    const last=tasks.map(s=>s.end).sort().at(-1),mapping=new Map();
+    let target=nextWorkDay(day,next);
+    for(let source=day;source<=last;source=addDays(source,1)){
+      if(isDayOff(source,data))continue;
+      mapping.set(source,target);
+      target=nextWorkDay(addDays(target,1),next);
+    }
+    for(const stage of tasks){
+      const before={...stage};
+      if(stage.start>=day)stage.start=mapping.get(stage.start)||nextWorkDay(stage.start,next);
+      stage.end=mapping.get(stage.end)||nextWorkDay(stage.end,next);
+      if(before.start!==stage.start||before.end!==stage.end)changes.push(order.title+' · '+stage.name+' → '+stage.start+'–'+stage.end);
+    }
+  }
+  if(!validData(next))throw Error('Не вдалося перерахувати робочі дні. Перевір дати етапів.');
+  return {next,changes}
+}
 $('#toggleDayOff').onclick=async()=>{
   const day=selectedDay;
   if(isSunday(day))return;
-  const removing=isDayOff(day),next=structuredClone(orders);
-  let meta=next.find(o=>o.id===DAY_NOTES_ID);
-  if(!meta){
-    meta={id:DAY_NOTES_ID,title:'Примітки календаря',status:'cancelled',stages:[],dayNotes:{}};
-    next.push(meta)
-  }
-  meta.daysOff??={};
-  if(removing)delete meta.daysOff[day];
-  else{
-    if(deadlinesOn(day).length){
-      toast('Спочатку перенеси погоджену здачу цього дня в картці замовлення.');
-      return
+  const removing=isDayOff(day);
+  let next;
+  try{
+    if(removing){
+      next=structuredClone(orders);
+      const meta=next.find(o=>o.id===DAY_NOTES_ID);
+      if(meta?.daysOff)delete meta.daysOff[day];
+    }else{
+      const plan=planAdditionalDayOff(orders,day);
+      next=plan.next;
+      const pairs=conflicts(next);
+      const warning=pairs.length?'\nМожливі накладки з іншими роботами.':'';
+      if(plan.changes.length&&!confirm('Робота з цього дня й наступні роботи відповідних замовлень перейдуть на пізніші робочі дні:\n'+plan.changes.join('\n')+'\n\nПогоджені дати здачі залишаться незмінними.'+warning+'\nПозначити вихідним?'))return;
     }
-    meta.daysOff[day]=true;
-    const changes=[];
-    for(const order of next){
-      for(const stage of order.stages){
-        if(!busy(order,stage)||day<stage.start||day>stage.end)continue;
-        const count=workDays(stage.start,stage.end);
-        stage.start=nextWorkDay(stage.start,next);
-        stage.end=workEnd(stage.start,count,next);
-        changes.push(order.title+' · '+stage.name+' → '+stage.start+'–'+stage.end)
-      }
+    if(await persist(next)){
+      render();
+      if($('#dayDialog').open&&selectedDay===day)showDay(day);
+      toast(removing?'День знову робочий.':'Вихідний збережено, роботи перенесено вперед.');
     }
-    if(changes.length&&!confirm('Щоб зберегти кількість робочих днів, зміняться етапи:\n'+changes.join('\n')+'\n\nПозначити вихідним?'))return
-  }
-  if(await persist(next)){
-    render();
-    if($('#dayDialog').open&&selectedDay===day)showDay(day);
-    toast(removing?'День знову робочий.':'Вихідний збережено.')
-  }
-};
-function showDay(day){$('#planDay').hidden=isDayOff(day);const toggle=$('#toggleDayOff');toggle.hidden=isSunday(day);toggle.textContent=isDayOff(day)?'Зробити робочим днем':'Позначити вихідним';selectedDay=day;$('#dayTitle').textContent=new Date(day+'T12:00').toLocaleDateString('uk-UA',{day:'numeric',month:'long',weekday:'long'});const dayConflicts=conflictsOnDay(conflicts(orders),day);$('#dayTasks').innerHTML=(dayConflicts.length?'<h3 style="margin-top:16px">Накладки цього дня</h3>'+dayConflicts.map(pair=>`<div class="warning">${pair.map(t=>`<b>${esc(t.o.title)}</b> · ${esc(t.s.name)} (${people[t.s.person]}${t.s.from?' · '+esc(t.s.from)+'–'+esc(t.s.to):''})`).join('<br>↔<br>')}</div>`).join(''):'')+deadlinesOn(day).map(o=>`<div class="warning">⚑ Погоджена здача: <button data-edit="${esc(o.id)}">${esc(o.title)}</button></div>`).join('')+forecastsOn(day).map(o=>`<div>Прогноз здачі: ${esc(o.title)}</div>`).join('')+taskRows(allTasks(day),day)+`<form id="dayNoteForm" style="margin-top:16px"><label>Примітка дня · що залишилося доробити<textarea id="dayNoteText" maxlength="2000" placeholder="Наприклад: довезти та встановити 2 полиці">${esc(dayNote(day))}</textarea></label><button class="primary">Зберегти примітку</button><small>У минулих днях календаря показується лише ця примітка. Очисти текст і збережи, коли питання вирішене.</small></form>`;if(!$('#dayDialog').open)$('#dayDialog').showModal();bindEdits();$('#dayNoteForm').onsubmit=async e=>{e.preventDefault();const next=structuredClone(orders);let meta=next.find(o=>o.id===DAY_NOTES_ID);if(!meta){meta={id:DAY_NOTES_ID,title:'Примітки календаря',status:'cancelled',stages:[],dayNotes:{}};next.push(meta)}meta.dayNotes=meta.dayNotes||{};const text=$('#dayNoteText').value.trim();if(text)meta.dayNotes[day]=text;else delete meta.dayNotes[day];if(await persist(next)){render();toast('Примітку збережено')}}}
+  }catch(error){toast(error.message)}
+};function showDay(day){$('#planDay').hidden=isDayOff(day);const toggle=$('#toggleDayOff');toggle.hidden=isSunday(day);toggle.textContent=isDayOff(day)?'Зробити робочим днем':'Позначити вихідним';selectedDay=day;$('#dayTitle').textContent=new Date(day+'T12:00').toLocaleDateString('uk-UA',{day:'numeric',month:'long',weekday:'long'});const dayConflicts=conflictsOnDay(conflicts(orders),day);$('#dayTasks').innerHTML=(dayConflicts.length?'<h3 style="margin-top:16px">Накладки цього дня</h3>'+dayConflicts.map(pair=>`<div class="warning">${pair.map(t=>`<b>${esc(t.o.title)}</b> · ${esc(t.s.name)} (${people[t.s.person]}${t.s.from?' · '+esc(t.s.from)+'–'+esc(t.s.to):''})`).join('<br>↔<br>')}</div>`).join(''):'')+deadlinesOn(day).map(o=>`<div class="warning">⚑ Погоджена здача: <button data-edit="${esc(o.id)}">${esc(o.title)}</button></div>`).join('')+forecastsOn(day).map(o=>`<div>Прогноз здачі: ${esc(o.title)}</div>`).join('')+taskRows(allTasks(day),day)+`<form id="dayNoteForm" style="margin-top:16px"><label>Примітка дня · що залишилося доробити<textarea id="dayNoteText" maxlength="2000" placeholder="Наприклад: довезти та встановити 2 полиці">${esc(dayNote(day))}</textarea></label><button class="primary">Зберегти примітку</button><small>У минулих днях календаря показується лише ця примітка. Очисти текст і збережи, коли питання вирішене.</small></form>`;if(!$('#dayDialog').open)$('#dayDialog').showModal();bindEdits();$('#dayNoteForm').onsubmit=async e=>{e.preventDefault();const next=structuredClone(orders);let meta=next.find(o=>o.id===DAY_NOTES_ID);if(!meta){meta={id:DAY_NOTES_ID,title:'Примітки календаря',status:'cancelled',stages:[],dayNotes:{}};next.push(meta)}meta.dayNotes=meta.dayNotes||{};const text=$('#dayNoteText').value.trim();if(text)meta.dayNotes[day]=text;else delete meta.dayNotes[day];if(await persist(next)){render();toast('Примітку збережено')}}}
 function renderToday(pairs){const late=orders.filter(o=>!o.archived&&!['done','cancelled'].includes(o.status)).flatMap(o=>o.stages.filter(s=>!s.done&&s.end<today).map(s=>({o,s})));$('#content').innerHTML=`<h2>Сьогодні · ${new Date().toLocaleDateString('uk-UA',{day:'numeric',month:'long'})}</h2><div class="card">${taskRows(allTasks(today))}</div>${late.length?'<h2 style="margin-top:24px">Незавершені минулі етапи</h2><div class="card">'+taskRows(late)+'</div>':''}${pairs.length?'<h2 style="margin-top:24px">Потребують узгодження</h2>'+pairs.map(p=>`<button class="warning" style="display:block;width:100%;text-align:left" data-conflict-day="${conflictDay(p)}">${conflictDay(p)} · ${p.map(t=>esc(t.o.title)+' · '+esc(t.s.name)).join(' ↔ ')} →</button>`).join(''):''}`;document.querySelectorAll('[data-conflict-day]').forEach(b=>b.onclick=()=>jumpConflict(b.dataset.conflictDay));bindEdits()}
 async function deleteOrder(id){const order=orders.find(o=>o.id===id);if(!order)return;if(confirm('Видалити замовлення «'+order.title+'» та всі його етапи?')&&await persist(orders.filter(o=>o.id!==id))){if(editing===id)$('#editor').close();render();toast('Замовлення видалено')}}
 async function setArchived(id,archived){const next=structuredClone(orders),o=next.find(x=>x.id===id);if(!o)return;if(archived&&o.status!=='done'){toast('В архів можна перемістити замовлення зі статусом «Завершено».');return}o.archived=archived;if(await persist(next)){render();toast(archived?'Замовлення переміщено в архів':'Замовлення повернуто з архіву')}}
