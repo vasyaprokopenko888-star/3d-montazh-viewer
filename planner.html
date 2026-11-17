@@ -817,9 +817,14 @@ function planShiftFromDay(data,orderId,stageId,day,target){
     changes.push({before,after:item})
   }
   if(steps<0){
-    const completed=order.stages.filter(s=>s.done);
-    if(changes.some(({before,after})=>completed.some(s=>s.end<before.start&&s.end>=after.start))){
-      throw Error('Це перенесення поставить роботу перед уже виконаним етапом. Обери пізнішу дату.');
+    const completed=order.stages.filter(s=>s.done&&s.person!=='wait');
+    for(const {before,after} of changes.filter(c=>c.after.person!=='wait')){
+      const blocker=completed.find(s=>s.end<before.start&&s.end>=after.start);
+      if(blocker){
+        throw Error('Неможливо перенести «'+after.name+'» на '+after.start+
+          ': виконаний етап «'+blocker.name+'» має дату завершення '+blocker.end+
+          '. Очікування матеріалів не блокує перенесення.');
+      }
     }
   }
   if(!validData([order]))throw Error('Перевір дати та години етапу.');
