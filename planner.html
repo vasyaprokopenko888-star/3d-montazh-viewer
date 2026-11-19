@@ -165,9 +165,10 @@ main{padding:10px 6px}nav{gap:5px;margin-bottom:9px}nav button{font-size:12px;pa
 }
 #scanToggle {position:absolute;right:14px;top:calc(env(safe-area-inset-top,0px) + 12px);background:#242424;color:white;border:1px solid white;border-radius:24px;padding:10px 16px}
 #scanToggle[aria-pressed=true] {background:#00644d}
-#scanFrame,#scanResult {display:none;pointer-events:none}
-.scanning #scanFrame {display:block;position:absolute;left:6%;top:42%;width:88%;height:12%;box-sizing:border-box;border:2px solid white;border-radius:8px;box-shadow:0 0 0 9999px #0003}
-.scanning #scanResult {display:block;position:absolute;left:4%;right:4%;bottom:8%;background:#121212ed;color:white;padding:14px;text-align:center;font-size:clamp(19px,5vw,32px);white-space:pre-line;border-radius:10px}
+#scanShot,#scanResult {display:none}
+.scanning #scanShot {display:block;position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);left:50%;transform:translateX(-50%);min-height:58px;border-radius:32px;background:white;color:#171717;font-size:20px;padding:0 30px;touch-action:manipulation}
+.scanning #scanShot:disabled {opacity:.65}
+.scanning #scanResult {display:block;position:absolute;left:4%;right:4%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);pointer-events:none;background:#121212ed;color:white;padding:14px;text-align:center;font-size:clamp(19px,5vw,32px);white-space:pre-line;border-radius:10px}
 .scanning #receiptShot {display:none}
 #receiptCapture::backdrop {background:#000}
 #receiptVideo {display:block;width:100%;height:100%;object-fit:cover}
@@ -1201,7 +1202,7 @@ initParentOrders();render();bootCloud();
 </dialog>
 <dialog id="receiptCapture" aria-label="Камера чека">
  <video id="receiptVideo" autoplay muted playsinline></video>
- <div id="scanFrame"></div><output id="scanResult" aria-live="polite"></output>
+ <button type="button" id="scanShot" disabled>Сканувати</button><output id="scanResult" aria-live="polite"></output>
  <button type="button" id="scanToggle" aria-pressed="false">Сканування</button>
  <button type="button" id="receiptCameraClose" aria-label="Закрити камеру">×</button>
  <button type="button" id="receiptShot" aria-label="Сфотографувати чек" disabled></button>
@@ -1221,12 +1222,14 @@ initParentOrders();render();bootCloud();
  const video = camera.querySelector('video');
  const toggle = camera.querySelector('#scanToggle');
  const result = camera.querySelector('#scanResult');
- const frame = camera.querySelector('#scanFrame');
+ const shot = camera.querySelector('#scanShot');
  let session;
 
  function stop() {
   const old = session;
   session = null;
+  shot.disabled = true;
+  shot.onclick = null;
   clearTimeout(old?.timer);
   old?.worker?.terminate().catch(() => {});
   camera.classList.remove('scanning');
@@ -1236,13 +1239,12 @@ initParentOrders();render();bootCloud();
 
  function readFrame() {
   const box = video.getBoundingClientRect();
-  const area = frame.getBoundingClientRect();
   const scale = Math.max(box.width / video.videoWidth, box.height / video.videoHeight);
-  const x = (area.left - box.left + (video.videoWidth * scale - box.width) / 2) / scale;
-  const y = (area.top - box.top + (video.videoHeight * scale - box.height) / 2) / scale;
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(area.width / scale);
-  canvas.height = Math.round(area.height / scale);
+  canvas.width = Math.round(box.width / scale);
+  canvas.height = Math.round(box.height / scale);
+  const x = (video.videoWidth - canvas.width) / 2;
+  const y = (video.videoHeight - canvas.height) / 2;
   canvas.getContext('2d').drawImage(video, x, y, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
   return canvas;
  }
@@ -1261,22 +1263,33 @@ initParentOrders();render();bootCloud();
    camera.querySelector('#receiptCameraError').textContent = 'Не вдалося зчитати номер. Перевірте інтернет і знову натисніть «Сканування».';
   }
   async function scan() {
-   if (!active()) return;
+   if (!active() || shot.disabled) return;
+   if (video.readyState < 2 || !video.videoWidth) {
+    show('Камера запускається. Натисніть ще раз.');
+    return;
+   }
+   shot.disabled = true;
+   let snapshot;
    try {
-    if (video.readyState >= 2 && video.videoWidth) {
-     const {data} = await current.worker.recognize(readFrame());
-     if (!active()) return;
-     const numbers = labelNumbers(data.text);
-     const matches = numbers.flatMap(number => inspectOrderNumbers(orders, number).map(hit =>
-      'mkf-' + number + ' · ' + hit.order + '\n' + hit.material));
-     const labels = [...new Set(matches)];
-     if (labels.length === 1) show(labels[0]);
-     else if (labels.length > 1) show('Кілька збігів. Наведіть рамку на один номер.');
-     else if (numbers.length === 1) show('mkf-' + numbers[0] + ' · Замовлення не знайдено');
-     else show('Наведіть рамку на весь номер mkf-…');
+    snapshot = readFrame();
+    show('Шукаю номер на етикетці…');
+    current.timer = setTimeout(fail, 90000);
+    const {data} = await current.worker.recognize(snapshot);
+    if (!active()) return;
+    const numbers = labelNumbers(data.text);
+    if (!numbers.length) show('Номер mkf- не зчитано. Зніміть етикетку ближче.');
+    else if (numbers.length > 1) show('Зчитано кілька номерів. Зніміть одну етикетку.');
+    else {
+     const number = numbers[0];
+     const labels = [...new Set(inspectOrderNumbers(orders, number).map(hit => hit.order + '\n' + hit.material))];
+     show('mkf-' + number + ' · ' + (labels.join('\n') || 'Замовлення не знайдено'));
     }
-    current.timer = setTimeout(scan, 500);
    } catch { fail(); }
+   finally {
+    if (snapshot) snapshot.width = snapshot.height = 0;
+    clearTimeout(current.timer);
+    if (active()) shot.disabled = false;
+   }
   }
   try {
    current.timer = setTimeout(fail, 90000);
@@ -1290,11 +1303,12 @@ initParentOrders();render();bootCloud();
    });
    if (!active()) { await worker.terminate(); return; }
    current.worker = worker;
-   await worker.setParameters({tessedit_pageseg_mode:'7'});
+   await worker.setParameters({tessedit_pageseg_mode:'11'});
    if (!active()) return;
    clearTimeout(current.timer);
-   show('Наведіть рамку на весь номер mkf-…');
-   await scan();
+   show('Наведіть камеру на етикетку й натисніть «Сканувати».');
+   shot.onclick = scan;
+   shot.disabled = false;
   } catch { fail(); }
  }
  toggle.onclick = () => {
