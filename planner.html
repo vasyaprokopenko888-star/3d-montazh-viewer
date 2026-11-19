@@ -1216,21 +1216,21 @@ initParentOrders();render();bootCloud();
 <script>
 (() => {
  function labelNumbers(text, selectedLine = false) {
-  const raw = text.normalize('NFKC');
-  const prefix = /mkf\s*[-‐‑‒–—−]\s*(\d{6})(?![\p{L}\p{N}])/giu;
+  const raw = text.normalize('NFKC').replace(/[‐‑‒–—−]/g,'-');
+  const prefix = /(?:^|[^\p{L}\p{N}])[mм][kк][\p{L}]?[ \t]*-?[ \t]*(\d{6})(?![\p{L}\p{N}])/giu;
   const marked = selectedLine ? raw.replace(/(\d)[ \t]+(?=\d)/g,'$1') : raw;
   const explicit = [...new Set(Array.from(marked.matchAll(prefix), match => match[1]))];
   if (explicit.length) return explicit;
 
   const bare = /(?<![\p{L}\p{N}])(\d{6})(?![\p{L}\p{N}])/gu;
-  const known = new Set();
+  const candidates = new Set();
   for (const match of marked.matchAll(bare)) {
    // Ignore segments of longer printed identifiers such as 00-123456.
    const before = marked.slice(0,match.index), after = marked.slice(match.index+6);
    if (/\d[-‐‑‒–—−./]$/.test(before) || /^[-‐‑‒–—−./]\d/.test(after)) continue;
-   if (inspectOrderNumbers(orders,match[1]).length) known.add(match[1]);
+   candidates.add(match[1]);
   }
-  return [...known];
+  return [...candidates];
  }
  // Thermal print can leave narrow white gaps across entire rows of characters.
  async function readBrokenPrint(worker, image, thickness) {
