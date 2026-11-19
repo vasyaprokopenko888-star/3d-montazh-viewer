@@ -1,0 +1,16 @@
+{
+  "id": "./planner.html?open=receipt-camera",
+  "start_url": "./planner.html?open=receipt-camera",
+  "scope": "./",
+  "display": "standalone",
+  "name": "Камера чеків",
+  "short_name": "Камера чеків",
+  "lang": "uk",
+  "icons": [
+    {
+      "src": "receipt-camera.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

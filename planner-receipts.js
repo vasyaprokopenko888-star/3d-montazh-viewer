@@ -182,11 +182,12 @@
   await loadRecords();
  }
 
- async function savePhoto(image) {
+ async function savePhoto(image, closeAfterShot = false) {
   assertContext();
   const record = {...image, scope, id:uid(), date:$('#receiptDate').value || localToday(), autoCapture:true};
   await access('readwrite', store => store.add(record));
   stopCamera();
+  if (closeAfterShot) dialog.close();
   status.textContent = 'Синхронізую чек…';
   try {
    await ready();
@@ -195,6 +196,7 @@
    throw Error('Чек збережено на пристрої. Для синхронізації відкрий «Загальні витрати» з інтернетом або натисни «Оновити чеки».');
   }
   await access('readwrite', store => store.delete(record.id));
+  if (closeAfterShot) { toast('Чек збережено у «Загальні витрати».'); return; }
   $('#receiptsFrom').value = '';
   $('#receiptsTo').value = '';
   await loadRecords();
@@ -209,7 +211,7 @@
  };
  $('#receiptShot').onclick = () => run(async () => {
   try {
-   await savePhoto(await toJpeg(video, video.videoWidth, video.videoHeight));
+   await savePhoto(await toJpeg(video, video.videoWidth, video.videoHeight), true);
   } catch (error) {
    $('#receiptCameraError').textContent = error.message || 'Не вдалося зберегти чек.';
    throw error;
@@ -327,11 +329,15 @@
   busy = true;
   updateButtons();
   try { await action(); }
-  catch (error) { status.textContent = error.message || 'Не вдалося виконати дію. Спробуй ще раз.'; }
+  catch (error) {
+   status.textContent = error.message || 'Не вдалося виконати дію. Спробуй ще раз.';
+   if (!dialog.open) toast(status.textContent);
+  }
   finally { busy = false; updateButtons(); }
  }
 
  function openReceipts(takePhoto) {
+  if (busy) return toast('Триває синхронізація чека.');
   if (!cloudSession || cloudRevision === null) return toast('Спочатку увійди й завантаж дані.');
   let userId = cloudSession.user?.id;
   if (!userId) {
@@ -360,6 +366,18 @@
  }
  document.getElementById('receiptsOpen').onclick = () => openReceipts(false);
  document.getElementById('receiptsCameraOpen').onclick = () => openReceipts(true);
+ if (typeof receiptShortcut !== 'undefined' && receiptShortcut) {
+  document.title = 'Камера чеків';
+  let pendingLaunch = true;
+  function launchWhenReady() {
+   if (!pendingLaunch || !cloudSession || cloudRevision === null || document.querySelector('dialog[open]')) return;
+   pendingLaunch = false;
+   openReceipts(true);
+  }
+  document.addEventListener('planner-board-ready', launchWhenReady);
+  for (const gate of [$('#cloudGate'), $('#passwordGate')]) gate.addEventListener('close', launchWhenReady);
+  launchWhenReady();
+ }
  $('#receiptsClose').onclick = () => { if (!busy) dialog.close(); };
  dialog.oncancel = event => { if (busy) event.preventDefault(); };
  dialog.onclose = () => {
