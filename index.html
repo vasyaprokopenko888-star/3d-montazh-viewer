@@ -395,6 +395,10 @@ function disposeTree(object){const geos=new Set(),mats=new Set(object.userData.s
 function refresh(){updatePrintButton();updateModuleUI();updateWardrobe();const focusButton=document.querySelector('[data-focus-selection]');if(focusButton)focusButton.disabled=!selection.size;let hidden=parts.filter(p=>p.hidden).length;$('hide').disabled=!selection.size;$('restore').disabled=!hidden&&!isolated;$('isolate').disabled=!selection.size;clearSelection.disabled=!selection.size;$('hide').textContent=selection.size>1?'Приховати вибрані ('+selection.size+')':'Приховати панель';
  $('name').textContent=selected?'Панель: '+selected.name:'Панель: не вибрано';$('size').textContent=selected?'Розмір: '+selected.size.map(v=>Math.round(v)).join(' × ')+' мм':'Розмір: —';
  $('detail-note').textContent=selected?(selected.inferred?'Визначено за формою · локальні габарити':'Локальні габарити деталі без фурнітури'):'Натисніть на панель у моделі';
+ if(selected&&selection.size===1){
+  const fittings=panelFasteners(selected);
+  $('detail-note').textContent=fittings?'Кріплення за моделлю: '+fittings:'У моделі кріплення цієї деталі не позначено.';
+ }
  $('parts').value=selected?String(selected.id):'';
  if(selection.size>1){$('name').textContent='Вибрано панелей: '+selection.size;$('size').textContent='Розміри кожної деталі — у списку нижче';$('detail-note').textContent='Ctrl / ⌘ + клік або режим множинного вибору';}
  selectionList.replaceChildren();if(selection.size>1)for(const p of selection){const row=document.createElement('div');row.style.cssText='border-top:1px solid #daddd6;padding:9px 0;font-size:12px';const title=document.createElement('strong');title.style.fontSize='13px';title.textContent=p.name;const dimensions=document.createElement('div');dimensions.textContent=p.size.map(Math.round).join(' × ')+' мм';const materials=document.createElement('div');materials.className='muted';materials.textContent='Матеріал: '+(p.materials?.map(m=>m.name).join('; ')||'Не вказано');const remove=document.createElement('button');remove.textContent='Зняти';remove.setAttribute('aria-label','Зняти вибір: '+p.name);remove.onclick=()=>choose(p,true);row.append(title,dimensions,materials,remove);selectionList.appendChild(row);}
@@ -1512,13 +1516,45 @@ scanButton.onclick=()=>{
  if(!root||loading){scanStatus.textContent='Спочатку відкрий проєкт.';return;}
  scanInput.click();
 };
-function readPanelNumber(text){
- const numbers=new Set();
+function labelModuleCode(line){
+ const match=/M[O0]D[\s_.–-]*(\d+)(?=[\s_.-])[\s_.-]+[^(){}\n]{0,22}?[-.]\s*([A-Z]{1,4})(?=[\s_({]|$)/i.exec(line);
+ return match?Number(match[1])+'-'+match[2].toUpperCase():null;
+}
+function findLabelPanel(text,panels){
+ const numbers=new Set(),codes=new Set();
  for(const line of text.toUpperCase().split(/\r?\n/)){
-  if(!/M[O0]D/.test(line))continue;
-  for(const match of line.matchAll(/[({]\s*(\d+)\s*[})]/g))numbers.add(String(Number(match[1])));
+  const code=labelModuleCode(line);
+  if(code)codes.add(code);
+  if(!/M[O0]D/.test(line)&&!/^\s*[(]\s*\d+\s*[)]\s*$/.test(line)&&!/ДЕТ|ДЕТАЛЬ|PANEL|PART/.test(line))continue;
+  for(const match of line.matchAll(/[({]\s*(\d+)\s*[})]/g))numbers.add(Number(match[1]));
  }
- return numbers.size===1?[...numbers][0]:null;
+ if(numbers.size>1||codes.size>1)return null;
+ const [number]=numbers,[code]=codes;
+ if(number===undefined&&!code)return null;
+ const matches=panels.filter(panel=>{
+  if(number!==undefined&&!matchesPanelSearch(panel.name,String(number)))return false;
+  const modelCode=labelModuleCode(panel.name);
+  return !code||modelCode===code||(number!==undefined&&!modelCode);
+ });
+ return matches.length===1?matches[0]:null;
+}
+function panelFasteners(panel){
+ if(panel.fastenerSummary!==undefined)return panel.fastenerSummary;
+ const symbols={cabineo:'Cabineo',hingecup:'чашка петлі',hingemountingplate:'монтажна планка петлі',minifixbolts:'шток мініфікса',minifixplasticbase:'пластикова основа мініфікса',screwinside:'гвинт'};
+ const counts=new Map();
+ function visit(node){
+  if(node!==panel.owner&&node.userData.part&&node.userData.part!==panel)return;
+  const raw=node.userData.sourceName||node.name||'';
+  const symbol=/^_*ABF[ _.\-]+([a-z]+)$/i.exec(raw);
+  const known=symbol&&symbols[symbol[1].toLowerCase()];
+  if(!known&&hardwareAnnotationRE.test(raw))return;
+  const name=known||(!symbol&&hardwareNameRE.test(raw)&&node!==panel.owner?displayName(node):null);
+  if(name){counts.set(name,(counts.get(name)||0)+1);return;}
+  for(const child of node.children)visit(child);
+ }
+ visit(panel.owner);
+ panel.fastenerSummary=[...counts].map(([name,count])=>name+' × '+count).join(', ');
+ return panel.fastenerSummary;
 }
 let ocrLibrary;
 function loadPanelOCR(){
@@ -1560,23 +1596,19 @@ scanInput.onchange=async()=>{
    crop.getContext('2d').drawImage(img,img.width*x,img.height*y,img.width*w,img.height*h,0,0,crop.width,crop.height);
    const {data}=await worker.recognize(crop);
    if(root!==model||loading){scanStatus.textContent='Проєкт змінився. Відскануй наклейку ще раз.';return;}
-   const number=readPanelNumber(data.text);
-   if(number===null)continue;
-   const matches=parts.filter(p=>matchesPanelSearch(p.name,number));
-   if(matches.length!==1){
-    scanStatus.textContent=matches.length?'Кілька панелей мають номер '+number+'.':'У цій моделі немає панелі №'+number+'.';
-    return;
-   }
-   const part=matches[0];
-   if(part.hidden){scanStatus.textContent='Панель №'+number+' прихована. Покажи її та повтори сканування.';return;}
+   const part=findLabelPanel(data.text,parts);
+   if(!part)continue;
+   if(activeModule&&part.module!==activeModule)leaveModule();
+   if(part.hidden&&isolated)$('restore').click();
+   if(part.hidden)setHidden(part,false);
    panelSearch.value='';
-   filterPanelOptions();
    choose(part);
-   scanStatus.textContent='Знайдено панель №'+number+'.';
+   fit(true);
+   scanStatus.textContent='Знайдено: '+part.name;
    if(toolsMenu.classList.contains('open')&&matchMedia('(max-width:800px)').matches)closeMenuGesture();
    return;
   }
-  scanStatus.textContent='Номер не прочитано. Сфотографуй рядок MOD із числом у дужках крупніше.';
+  scanStatus.textContent='Однозначного збігу в цьому проєкті немає. Сфотографуй назву деталі та номер у дужках крупніше.';
  }catch{
   scanStatus.textContent='Не вдалося обробити фото. Перевір інтернет і повтори сканування.';
  }finally{
