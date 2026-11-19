@@ -1,12 +1,13 @@
 (() => {
  const dialog = $('#receiptsDialog');
  const form = $('#receiptForm');
- const preview = $('#receiptPreview');
+ const video = $('#receiptVideo');
+ let stream;
  const status = $('#receiptStatus');
  const selected = new Set();
  const thumbnailUrls = [];
  let context;
- let database, scope, records = [], pending = null, photoVersion = 0, busy = false;
+ let database, scope, records = [], busy = false;
 
  // Capture the account and workspace for each operation; never mix sessions.
  function assertContext() {
@@ -62,7 +63,7 @@
   try {
    await request(query({}), {method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({
     board_id:context.board, created_by:context.user, id:record.id, receipt_date:record.date,
-    order_id:record.orderId || '', order_title:record.orderTitle || '', width:record.width,height:record.height
+    order_id:'', order_title:'', width:record.width,height:record.height
    })});
   } catch (error) {
    if (error.status !== 409 || !(await request(query({...key,select:'id'}))).length) throw error;
@@ -84,7 +85,7 @@
   for (let offset = 0; offset < rows.length; offset += 4) {
    next.push(...await Promise.all(rows.slice(offset,offset+4).map(async row => ({
     id:row.created_by + '/' + row.id, cloudId:row.id, creator:row.created_by,
-    date:row.receipt_date,orderId:row.order_id,orderTitle:row.order_title,
+    date:row.receipt_date,
     width:row.width,height:row.height,photo:await request(objectUrl(row.object_path),{},true)
    }))));
   }
@@ -122,47 +123,91 @@
    const image = new Image();
    image.src = url;
    await image.decode();
-   const scale = Math.min(1, 2800 / Math.max(image.naturalWidth, image.naturalHeight));
-   const canvas = document.createElement('canvas');
-   canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-   canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-   const context = canvas.getContext('2d', {alpha:false});
-   context.fillStyle = '#fff';
-   context.fillRect(0, 0, canvas.width, canvas.height);
-   context.drawImage(image, 0, 0, canvas.width, canvas.height);
-   const photo = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', .91));
-   if (!photo) throw Error('Не вдалося підготувати фото.');
-   return {photo, width:canvas.width, height:canvas.height};
+   return await toJpeg(image, image.naturalWidth, image.naturalHeight);
   } finally { URL.revokeObjectURL(url); }
  }
 
- function resetPhoto() {
-  photoVersion++;
-  pending = null;
-  if (preview.hasAttribute('src')) URL.revokeObjectURL(preview.src);
-  preview.removeAttribute('src');
-  preview.hidden = true;
-  for (const input of [$('#receiptCamera'), $('#receiptFile')]) input.value = '';
-  $('#receiptSave').disabled = true;
+ async function toJpeg(source, width, height) {
+  if (!width || !height) throw Error('Камера ще готується.');
+  const scale = Math.min(1, 2800 / Math.max(width, height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  const ctx = canvas.getContext('2d', {alpha:false});
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+  const photo = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', .91));
+  if (!photo) throw Error('Не вдалося підготувати фото.');
+  return {photo, width:canvas.width, height:canvas.height};
  }
 
- for (const input of [$('#receiptCamera'), $('#receiptFile')]) input.onchange = async () => {
-  const file = input.files[0];
-  if (!file) return;
-  resetPhoto();
-  const version = photoVersion;
-  status.textContent = 'Готую фото…';
+ function stopCamera() {
+  stream?.getTracks().forEach(track => track.stop());
+  stream = null;
+  video.srcObject = null;
+  $('#receiptCapture').hidden = true;
+ }
+
+ async function startCamera() {
+  stopCamera();
   try {
-   const image = await imageToJpeg(file);
-   if (version !== photoVersion) return;
-   pending = {...image, id:uid()};
-   preview.src = URL.createObjectURL(image.photo);
-   preview.hidden = false;
-   updateButtons();
-   status.textContent = 'Перевір, чи весь чек у кадрі й текст читається.';
+   stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{
+    facingMode:{ideal:'environment'}, width:{ideal:2560}, height:{ideal:1920}
+   }});
+   video.srcObject = stream;
+   $('#receiptCapture').hidden = false;
+   await video.play();
+   status.textContent = '';
   } catch {
-   if (version === photoVersion) status.textContent = 'Не вдалося відкрити фото. Спробуй JPG або PNG.';
+   stopCamera();
+   throw Error('Камера недоступна. Дозволь доступ до камери або вибери готове фото.');
   }
+ }
+
+ async function syncLocal() {
+  const local = await access('readonly', store => store.index('scope').getAll(scope));
+  for (const record of local) {
+   if (record.synced) continue;
+   await upload(record);
+   if (record.autoCapture) await access('readwrite', store => store.delete(record.id));
+   else await access('readwrite', store => store.put({...record, synced:true}));
+  }
+ }
+
+ async function refresh() {
+  await ready();
+  await syncLocal();
+  await loadRecords();
+ }
+
+ async function savePhoto(image) {
+  assertContext();
+  const record = {...image, scope, id:uid(), date:$('#receiptDate').value || localToday(), autoCapture:true};
+  await access('readwrite', store => store.add(record));
+  stopCamera();
+  status.textContent = 'Синхронізую чек…';
+  try {
+   await ready();
+   await upload(record);
+  } catch {
+   throw Error('Чек збережено на пристрої. Для синхронізації відкрий «Загальні витрати» з інтернетом або натисни «Оновити чеки».');
+  }
+  await access('readwrite', store => store.delete(record.id));
+  $('#receiptsFrom').value = '';
+  $('#receiptsTo').value = '';
+  await loadRecords();
+  status.textContent = 'Чек збережено у «Загальні витрати».';
+ }
+
+ $('#receiptCamera').onclick = () => run(startCamera);
+ $('#receiptShot').onclick = () => run(async () => {
+  await savePhoto(await toJpeg(video, video.videoWidth, video.videoHeight));
+ });
+ $('#receiptFile').onchange = event => {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (file) run(async () => { await savePhoto(await imageToJpeg(file)); });
  };
 
  function visibleRecords() {
@@ -176,8 +221,8 @@
   $('#receiptDownload').disabled = busy || !hasSelection;
   $('#receiptShare').disabled = busy || !hasSelection;
   $('#receiptSelectAll').disabled = busy || !visibleRecords().length;
-  $('#receiptSave').disabled = busy || !pending;
-  for (const id of ['receiptRefresh','receiptMigrate','receiptsFrom','receiptsTo','receiptCamera','receiptFile']) $('#'+id).disabled = busy;
+  $('#receiptShot').disabled = busy || !stream || !video.videoWidth;
+  for (const id of ['receiptRefresh','receiptDate','receiptsFrom','receiptsTo','receiptCamera','receiptFile']) $('#'+id).disabled = busy;
  }
 
  function renderList() {
@@ -199,8 +244,7 @@
     else selected.delete(record.id);
     updateButtons();
    };
-   const title = orders.find(order => order.id === record.orderId)?.title || record.orderTitle || 'Загальні витрати';
-   label.append(checkbox, ' ' + record.date + ' · ' + title);
+   label.append(checkbox, ' ' + record.date);
    const link = document.createElement('a');
    link.href = URL.createObjectURL(record.photo);
    thumbnailUrls.push(link.href);
@@ -248,64 +292,32 @@
   context = {url:cloudConfig.url,board:cloudConfig.workspace,user:userId};
   scope = JSON.stringify([context.url, context.board, context.user]);
   form.reset();
-  resetPhoto();
+  stopCamera();
   records = [];
   selected.clear();
   const date = localToday();
   $('#receiptDate').value = date;
-  $('#receiptsFrom').value = date.slice(0, 7) + '-01';
+  $('#receiptsFrom').value = '';
   $('#receiptsTo').value = '';
-  $('#receiptOrder').replaceChildren(new Option('Загальні витрати', ''), ...orders
-   .filter(order => order.id !== DAY_NOTES_ID && !order.standalone)
-   .map(order => new Option(order.title + (order.archived ? ' · архів' : ''), order.id)));
   status.textContent = '';
   renderList();
   dialog.showModal();
-  if (takePhoto) document.getElementById('receiptCamera').click();
-  run(loadRecords);
+  run(takePhoto ? startCamera : refresh);
  }
  document.getElementById('receiptsOpen').onclick = () => openReceipts(false);
  document.getElementById('receiptsCameraOpen').onclick = () => openReceipts(true);
  $('#receiptsClose').onclick = () => { if (!busy) dialog.close(); };
  dialog.oncancel = event => { if (busy) event.preventDefault(); };
  dialog.onclose = () => {
-  resetPhoto();
+  stopCamera();
   thumbnailUrls.splice(0).forEach(url => URL.revokeObjectURL(url));
   records = [];
   $('#receiptList').replaceChildren();
  };
- form.onsubmit = event => {
-  event.preventDefault();
-  if (!pending) return;
-  run(async () => {
-   const orderId = $('#receiptOrder').value;
-   const record = {...pending, scope, date:$('#receiptDate').value, orderId,
-    orderTitle:orders.find(order => order.id === orderId)?.title || ''};
-   await ready();
-   await upload(record);
-   $('#receiptsFrom').value = record.date.slice(0, 7) + '-01';
-   $('#receiptsTo').value = '';
-   resetPhoto();
-   await loadRecords();
-   status.textContent = 'Чек збережено у спільному сховищі.';
-  });
- };
+ form.onsubmit = event => event.preventDefault();
+ video.onloadeddata = updateButtons;
  for (const input of [$('#receiptsFrom'), $('#receiptsTo')]) input.onchange = () => run(loadRecords);
- $('#receiptRefresh').onclick = () => run(loadRecords);
- $('#receiptMigrate').onclick = () => run(async () => {
-  await ready();
-  const local = await access('readonly', store => store.index('scope').getAll(scope));
-  if (!local.length) { status.textContent = 'У цьому браузері для цього акаунта старих чеків немає.'; return; }
-  if (!confirm('Перенести ' + local.length + ' чеків у спільне сховище? Оригінали залишаться на цьому пристрої.')) return;
-  let done = 0;
-  for (const record of local) {
-   status.textContent = 'Перенесення: ' + done + ' / ' + local.length;
-   await upload(record);
-   done++;
-  }
-  await loadRecords();
-  status.textContent = 'Перевірено та перенесено: ' + done + '. Оригінали залишено на пристрої. Повторне перенесення не створює дублікатів.';
- });
+ $('#receiptRefresh').onclick = () => run(refresh);
  $('#receiptSelectAll').onclick = () => {
   visibleRecords().forEach(record => selected.add(record.id));
   renderList();

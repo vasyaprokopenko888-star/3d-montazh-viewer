@@ -1140,17 +1140,18 @@ $('#groupForm').onsubmit=async e=>{e.preventDefault();const name=$('#bulkGroupNa
 initParentOrders();render();bootCloud();
 </script>
 <dialog id="receiptsDialog">
- <div class="tools"><h2>Чеки</h2><button type="button" id="receiptsClose">Закрити</button></div>
- <p class="hint">Чеки зберігаються у спільному сховищі та доступні учасникам робочого простору. Старі фото можна перенести з цього пристрою.</p>
+ <div class="tools"><h2>Загальні витрати</h2><button type="button" id="receiptsClose">Закрити</button></div>
+ <p class="hint">Чеки зберігаються у спільному сховищі та доступні учасникам робочого простору. Старі чеки з цього пристрою синхронізуються автоматично.</p>
  <form id="receiptForm">
   <div class="fields">
    <label>Дата чека<input id="receiptDate" type="date" required></label>
-   <label>Замовлення<select id="receiptOrder"></select></label>
-   <label>Сфотографувати чек<input id="receiptCamera" type="file" accept="image/*" capture="environment"></label>
+   <button id="receiptCamera" type="button">Відкрити камеру</button>
    <label>Вибрати готове фото<input id="receiptFile" type="file" accept="image/*"></label>
   </div>
-  <img id="receiptPreview" alt="Попередній перегляд чека" hidden style="max-width:100%;max-height:40vh;object-fit:contain">
-  <button class="primary" id="receiptSave" disabled>Зберегти чек</button>
+  <div id="receiptCapture" hidden>
+   <video id="receiptVideo" autoplay muted playsinline style="width:100%;max-height:55vh;object-fit:contain"></video>
+   <button type="button" class="primary" id="receiptShot">Сфотографувати чек</button>
+  </div>
  </form>
  <hr>
  <div class="fields">
@@ -1158,11 +1159,11 @@ initParentOrders();render();bootCloud();
   <label>До включно<input id="receiptsTo" type="date"></label>
  </div>
  <div class="row"><button id="receiptSelectAll">Вибрати всі</button><button id="receiptDownload" disabled>Завантажити PDF</button><button id="receiptShare" disabled>Поділитися PDF</button></div>
- <div class="row"><button id="receiptRefresh" type="button">Оновити чеки</button><button id="receiptMigrate" type="button">Перенести старі чеки з цього пристрою</button></div>
+ <div class="row"><button id="receiptRefresh" type="button">Оновити чеки</button></div>
  <p id="receiptStatus" role="status"></p>
  <div id="receiptList"></div>
 </dialog>
-<script src="planner-receipts.js"></script>
+<script src="planner-receipts.js?v=20261119"></script>
 
 
 
