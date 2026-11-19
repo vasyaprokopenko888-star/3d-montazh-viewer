@@ -1216,8 +1216,22 @@ initParentOrders();render();bootCloud();
 <script>
 (() => {
  function labelNumbers(text) {
-  const pattern = /mkf[ \t]*[-‐‑‒–—−][ \t]*(\d{6})(?![\p{L}\p{N}])/giu;
+  const pattern = /mkf\s*[-‐‑‒–—−]\s*(\d{6})(?![\p{L}\p{N}])/giu;
   return [...new Set(Array.from(text.normalize('NFKC').matchAll(pattern), match => match[1]))];
+ }
+ // Thermal print can leave narrow white gaps across entire rows of characters.
+ async function readBrokenPrint(worker, image, thickness) {
+  const repaired = document.createElement('canvas');
+  repaired.width = image.width;
+  repaired.height = image.height;
+  try {
+   const ctx = repaired.getContext('2d');
+   ctx.drawImage(image,0,0);
+   ctx.globalCompositeOperation = 'darken';
+   for (let offset=1; offset<=thickness; offset++) ctx.drawImage(image,0,offset);
+   const {data} = await worker.recognize(repaired);
+   return labelNumbers(data.text);
+  } finally { repaired.width = repaired.height = 0; }
  }
  const camera = document.querySelector('#receiptCapture');
  const video = camera.querySelector('video');
@@ -1444,7 +1458,9 @@ function verticalLabelLines(rgba, width, height) {
       try {
        const {data} = await current.worker.recognize(strip);
        if (!active()) return;
-       const numbers = labelNumbers(data.text.replace(/(\d)[ \t]+(?=\d)/g,'$1'));
+       let numbers = labelNumbers(data.text.replace(/(\d)[ \t]+(?=\d)/g,'$1'));
+       if (!numbers.length) numbers = await readBrokenPrint(current.worker,strip,4);
+       if (!active()) return;
        if (numbers.length===1) {
         describe(numbers[0]); clearFrame(current); return;
        }
@@ -1493,6 +1509,11 @@ function verticalLabelLines(rgba, width, height) {
       const {data} = await current.worker.recognize(image);
       if (!active()) return;
       numbers = labelNumbers(data.text);
+      if (!numbers.length && angle===4) {
+       const thickness = Math.max(2,Math.min(7,Math.round(Math.min(image.width,image.height)/190)));
+       numbers = await readBrokenPrint(current.worker,image,thickness);
+       if (!active()) return;
+      }
       if (numbers.length) break;
      } finally {
       if (image !== snapshot) image.width = image.height = 0;
