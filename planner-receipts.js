@@ -146,7 +146,7 @@
   stream?.getTracks().forEach(track => track.stop());
   stream = null;
   video.srcObject = null;
-  $('#receiptCapture').hidden = true;
+  if ($('#receiptCapture').open) $('#receiptCapture').close();
  }
 
  async function startCamera() {
@@ -156,7 +156,8 @@
     facingMode:{ideal:'environment'}, width:{ideal:2560}, height:{ideal:1920}
    }});
    video.srcObject = stream;
-   $('#receiptCapture').hidden = false;
+   $('#receiptCameraError').textContent = '';
+   $('#receiptCapture').showModal();
    await video.play();
    status.textContent = '';
   } catch {
@@ -201,8 +202,18 @@
  }
 
  $('#receiptCamera').onclick = () => run(startCamera);
+ $('#receiptCameraClose').onclick = () => { if (!busy) stopCamera(); };
+ $('#receiptCapture').oncancel = event => {
+  event.preventDefault();
+  if (!busy) stopCamera();
+ };
  $('#receiptShot').onclick = () => run(async () => {
-  await savePhoto(await toJpeg(video, video.videoWidth, video.videoHeight));
+  try {
+   await savePhoto(await toJpeg(video, video.videoWidth, video.videoHeight));
+  } catch (error) {
+   $('#receiptCameraError').textContent = error.message || 'Не вдалося зберегти чек.';
+   throw error;
+  }
  });
  $('#receiptFile').onchange = event => {
   const file = event.target.files[0];
