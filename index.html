@@ -1495,6 +1495,96 @@ function applyInterfaceLanguage(redraw=true){
 languageSelect.onchange=()=>{interfaceLanguage=languageSelect.value;try{localStorage.setItem('assembly.interface-language',interfaceLanguage);}catch{}applyInterfaceLanguage();};
 applyInterfaceLanguage(false);
 
+
+const scanButton=document.createElement('button');
+scanButton.id='scan-panel-label';
+scanButton.textContent='📷 Сканувати деталь';
+const scanInput=document.createElement('input');
+scanInput.type='file';
+scanInput.accept='image/*';
+scanInput.setAttribute('capture','environment');
+scanInput.hidden=true;
+const scanStatus=document.createElement('p');
+scanStatus.className='muted';
+scanStatus.setAttribute('role','status');
+toolsMenu.querySelector('h2').after(scanButton,scanInput,scanStatus);
+scanButton.onclick=()=>{
+ if(!root||loading){scanStatus.textContent='Спочатку відкрий проєкт.';return;}
+ scanInput.click();
+};
+function readPanelNumber(text){
+ const numbers=new Set();
+ for(const line of text.toUpperCase().split(/\r?\n/)){
+  if(!/M[O0]D/.test(line))continue;
+  for(const match of line.matchAll(/[({]\s*(\d+)\s*[})]/g))numbers.add(String(Number(match[1])));
+ }
+ return numbers.size===1?[...numbers][0]:null;
+}
+let ocrLibrary;
+function loadPanelOCR(){
+ if(!ocrLibrary){
+  ocrLibrary=new Promise((resolve,reject)=>{
+   const script=document.createElement('script');
+   script.src='https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js';
+   script.onload=()=>resolve(window.Tesseract);
+   script.onerror=()=>{script.remove();ocrLibrary=null;reject(new Error('OCR'));};
+   document.head.append(script);
+  });
+ }
+ return ocrLibrary;
+}
+scanInput.onchange=async()=>{
+ const file=scanInput.files[0],model=root;
+ scanInput.value='';
+ if(!file||!model||loading)return;
+ scanButton.disabled=true;
+ scanStatus.textContent='Розпізнаю номер у рядку MOD…';
+ const url=URL.createObjectURL(file);
+ let worker;
+ try{
+  const img=new Image();
+  img.src=url;
+  await img.decode();
+  const library=await loadPanelOCR();
+  worker=await library.createWorker('eng',1,{
+   workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/worker.min.js',
+   corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@6.0.0',
+   langPath:'https://tessdata.projectnaptha.com/4.0.0'
+  });
+  await worker.setParameters({tessedit_pageseg_mode:'6'});
+  for(const [x,y,w,h] of [[.49,.335,.50,.33],[0,0,1,1]]){
+   const crop=document.createElement('canvas');
+   const scale=Math.min(2,1900/(img.width*w));
+   crop.width=Math.max(1,Math.round(img.width*w*scale));
+   crop.height=Math.max(1,Math.round(img.height*h*scale));
+   crop.getContext('2d').drawImage(img,img.width*x,img.height*y,img.width*w,img.height*h,0,0,crop.width,crop.height);
+   const {data}=await worker.recognize(crop);
+   if(root!==model||loading){scanStatus.textContent='Проєкт змінився. Відскануй наклейку ще раз.';return;}
+   const number=readPanelNumber(data.text);
+   if(number===null)continue;
+   const matches=parts.filter(p=>matchesPanelSearch(p.name,number));
+   if(matches.length!==1){
+    scanStatus.textContent=matches.length?'Кілька панелей мають номер '+number+'.':'У цій моделі немає панелі №'+number+'.';
+    return;
+   }
+   const part=matches[0];
+   if(part.hidden){scanStatus.textContent='Панель №'+number+' прихована. Покажи її та повтори сканування.';return;}
+   panelSearch.value='';
+   filterPanelOptions();
+   choose(part);
+   scanStatus.textContent='Знайдено панель №'+number+'.';
+   if(toolsMenu.classList.contains('open')&&matchMedia('(max-width:800px)').matches)closeMenuGesture();
+   return;
+  }
+  scanStatus.textContent='Номер не прочитано. Сфотографуй рядок MOD із числом у дужках крупніше.';
+ }catch{
+  scanStatus.textContent='Не вдалося обробити фото. Перевір інтернет і повтори сканування.';
+ }finally{
+  URL.revokeObjectURL(url);
+  scanButton.disabled=false;
+  if(worker)await worker.terminate();
+ }
+};
 refresh();resize();openLinkedProject();
 
 }catch(e){console.error(e);$('status').textContent='3D-модуль недоступний';error('Не вдалося запустити 3D. Перевірте інтернет і підтримку WebGL 2 у браузері. '+e.message);}
