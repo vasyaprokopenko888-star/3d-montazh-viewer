@@ -1325,7 +1325,7 @@ function verticalLabelLines(rgba, width, height) {
    const pixels = ctx.getImageData(0,0,thumb.width,thumb.height);
    const lines = verticalLabelLines(pixels.data,thumb.width,thumb.height);
    if (!lines.length || !active()) return [];
-   await worker.setParameters({tessedit_pageseg_mode:'7'});
+   await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'mkfMKF-0123456789 '});
    for (const line of lines) {
     for (const flip of [0,Math.PI]) {
      if (!active()) return [];
@@ -1350,7 +1350,7 @@ function verticalLabelLines(rgba, width, height) {
    return [];
   } finally {
    thumb.width = thumb.height = 0;
-   if (active()) await worker.setParameters({tessedit_pageseg_mode:'11'});
+   if (active()) await worker.setParameters({tessedit_pageseg_mode:'11',tessedit_char_whitelist:''});
   }
  }
 
