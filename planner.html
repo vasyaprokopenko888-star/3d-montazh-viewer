@@ -1224,9 +1224,9 @@ initParentOrders();render();bootCloud();
 
   const bare = /(?<![\p{L}\p{N}])(\d{6})(?![\p{L}\p{N}])/gu;
   const known = new Set();
-  for (const match of raw.matchAll(bare)) {
+  for (const match of marked.matchAll(bare)) {
    // Ignore segments of longer printed identifiers such as 00-123456.
-   const before = raw.slice(0,match.index), after = raw.slice(match.index+6);
+   const before = marked.slice(0,match.index), after = marked.slice(match.index+6);
    if (/\d[-‐‑‒–—−./]$/.test(before) || /^[-‐‑‒–—−./]\d/.test(after)) continue;
    if (inspectOrderNumbers(orders,match[1]).length) known.add(match[1]);
   }
@@ -1368,14 +1368,19 @@ function verticalLabelLines(rgba, width, height) {
  return selected;
 }
 
- async function readVerticalLabel(snapshot, worker, active) {
+ async function readLabelRows(snapshot, worker, active, horizontal) {
   const thumb = document.createElement('canvas');
   const scale = Math.min(1,1200/Math.max(snapshot.width,snapshot.height));
-  thumb.width = Math.round(snapshot.width*scale);
-  thumb.height = Math.round(snapshot.height*scale);
+  thumb.width = Math.round((horizontal ? snapshot.height : snapshot.width)*scale);
+  thumb.height = Math.round((horizontal ? snapshot.width : snapshot.height)*scale);
   try {
    const ctx = thumb.getContext('2d', {willReadFrequently:true});
-   ctx.drawImage(snapshot,0,0,thumb.width,thumb.height);
+   if (horizontal) {
+    // Reuse the same character grouping for a horizontal baseline.
+    ctx.translate(0,thumb.height);
+    ctx.rotate(-Math.PI/2);
+    ctx.drawImage(snapshot,0,0,thumb.height,thumb.width);
+   } else ctx.drawImage(snapshot,0,0,thumb.width,thumb.height);
    const pixels = ctx.getImageData(0,0,thumb.width,thumb.height);
    const lines = verticalLabelLines(pixels.data,thumb.width,thumb.height);
    if (!lines.length || !active()) return [];
@@ -1396,7 +1401,7 @@ function verticalLabelLines(rgba, width, height) {
       draw.rotate(Math.PI/2+line.angle+flip);
       draw.drawImage(thumb,-line.x,-line.y);
       const {data} = await worker.recognize(strip);
-      const numbers = labelNumbers(data.text);
+      const numbers = labelNumbers(data.text,true);
       if (numbers.length) return numbers;
      } finally { strip.width = strip.height = 0; }
     }
@@ -1510,11 +1515,16 @@ function verticalLabelLines(rgba, width, height) {
     show('Шукаю номер на етикетці…');
     current.timer = setTimeout(fail, 90000);
     let numbers = [];
-    for (const angle of [4, 94, -86, 184, 0, 90, -90, 180]) {
+    for (const angle of [0, 4, 94, -86, 184, 90, -90, 180]) {
      if (!active()) return;
+     if (angle === 4) {
+      show('Шукаю горизонтальний рядок із номером…');
+      numbers = await readLabelRows(snapshot,current.worker,active,true);
+      if (!active() || numbers.length) break;
+     }
      if (angle === 94) {
       show('Шукаю вертикальний номер на етикетці…');
-      numbers = await readVerticalLabel(snapshot,current.worker,active);
+      numbers = await readLabelRows(snapshot,current.worker,active,false);
       if (!active() || numbers.length) break;
      }
      const image = angle ? rotatedLabel(snapshot, angle) : snapshot;
