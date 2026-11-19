@@ -1215,7 +1215,7 @@ initParentOrders();render();bootCloud();
 <script>
 (() => {
  function labelNumbers(text) {
-  const pattern = /(?:^|[^\p{L}\p{N}])mkf[ \t]*[-‐‑–—][ \t]*(\d+)(?![\p{L}\p{N}])/giu;
+  const pattern = /mkf[ \t]*[-‐‑‒–—−][ \t]*(\d{6})(?![\p{L}\p{N}])/giu;
   return [...new Set(Array.from(text.normalize('NFKC').matchAll(pattern), match => match[1]))];
  }
  const camera = document.querySelector('#receiptCapture');
@@ -1249,6 +1249,21 @@ initParentOrders();render();bootCloud();
   return canvas;
  }
 
+ function rotatedLabel(frame, angle) {
+  const radians = angle * Math.PI / 180;
+  const cos = Math.abs(Math.cos(radians)), sin = Math.abs(Math.sin(radians));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.ceil(frame.width * cos + frame.height * sin);
+  canvas.height = Math.ceil(frame.height * cos + frame.width * sin);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(radians);
+  ctx.drawImage(frame, -frame.width / 2, -frame.height / 2);
+  return canvas;
+ }
+
  async function start() {
   const current = {};
   session = current;
@@ -1274,9 +1289,20 @@ initParentOrders();render();bootCloud();
     snapshot = readFrame();
     show('Шукаю номер на етикетці…');
     current.timer = setTimeout(fail, 90000);
-    const {data} = await current.worker.recognize(snapshot);
-    if (!active()) return;
-    const numbers = labelNumbers(data.text);
+    let numbers = [];
+    for (const angle of [4, 94, -86, 184, 0, 90, -90, 180]) {
+     if (!active()) return;
+     if (angle === 94) show('Перевіряю інші напрямки друку…');
+     const image = angle ? rotatedLabel(snapshot, angle) : snapshot;
+     try {
+      const {data} = await current.worker.recognize(image);
+      if (!active()) return;
+      numbers = labelNumbers(data.text);
+      if (numbers.length) break;
+     } finally {
+      if (image !== snapshot) image.width = image.height = 0;
+     }
+    }
     if (!numbers.length) show('Номер mkf- не зчитано. Зніміть етикетку ближче.');
     else if (numbers.length > 1) show('Зчитано кілька номерів. Зніміть одну етикетку.');
     else {
