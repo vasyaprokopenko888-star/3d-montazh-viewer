@@ -213,7 +213,9 @@
  function visibleRecords() {
   const from = $('#receiptsFrom').value;
   const to = $('#receiptsTo').value;
-  return records.filter(record => (!from || record.date >= from) && (!to || record.date <= to));
+  const ascending = $('#receiptSort').value === 'asc';
+  return records.filter(record => (!from || record.date >= from) && (!to || record.date <= to))
+   .sort((a, b) => ascending ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date));
  }
 
  function updateButtons() {
@@ -231,41 +233,80 @@
   list.replaceChildren();
   const visible = visibleRecords();
   if (!visible.length) list.textContent = 'За цей період чеків немає.';
+  const months = new Map();
   for (const record of visible) {
-   const row = document.createElement('div');
-   row.className = 'row';
-   const label = document.createElement('label');
-   const checkbox = document.createElement('input');
-   checkbox.type = 'checkbox';
-   checkbox.style.width = 'auto';
-   checkbox.checked = selected.has(record.id);
-   checkbox.onchange = () => {
-    if (checkbox.checked) selected.add(record.id);
-    else selected.delete(record.id);
+   const month = record.date.slice(0, 7);
+   if (!months.has(month)) months.set(month, []);
+   months.get(month).push(record);
+  }
+  for (const [month, receipts] of months) {
+   const section = document.createElement('section');
+   const heading = document.createElement('h3');
+   heading.textContent = new Date(month + '-01T12:00:00').toLocaleDateString('uk-UA', {month:'long', year:'numeric'});
+   const monthLabel = document.createElement('label');
+   const toggle = document.createElement('input');
+   toggle.type = 'checkbox';
+   const checks = [];
+   function updateMonth() {
+    const count = receipts.filter(record => selected.has(record.id)).length;
+    toggle.checked = count === receipts.length;
+    toggle.indeterminate = count > 0 && count < receipts.length;
+   }
+   toggle.onchange = () => {
+    for (const [index, record] of receipts.entries()) {
+     if (toggle.checked) selected.add(record.id);
+     else selected.delete(record.id);
+     checks[index].checked = toggle.checked;
+    }
+    updateMonth();
     updateButtons();
    };
-   label.append(checkbox, ' ' + record.date);
-   const link = document.createElement('a');
-   link.href = URL.createObjectURL(record.photo);
-   thumbnailUrls.push(link.href);
-   link.target = '_blank';
-   link.rel = 'noopener';
-   link.textContent = 'Фото';
-   const remove = document.createElement('button');
-   remove.textContent = 'Видалити';
-   remove.onclick = () => {
-    if (!busy && confirm('Прибрати цей чек зі спільного списку для обох учасників?')) run(async () => {
-     await ready();
-     const removed = await request(query(identity(record)),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({deleted_at:new Date().toISOString()})});
-     if (removed.length !== 1) throw Error('Чек не змінено. Онови список.');
-     records = records.filter(item => item.id !== record.id);
-     selected.delete(record.id);
-     renderList();
-     status.textContent = 'Чек видалено.';
-    });
-   };
-   row.append(label, link, remove);
-   list.append(row);
+   monthLabel.append(toggle, ' Вибрати місяць');
+   section.append(heading, monthLabel);
+   list.append(section);
+   updateMonth();
+   for (const record of receipts) {
+    const row = document.createElement('div');
+    row.className = 'receipt-item';
+    const label = document.createElement('label');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = selected.has(record.id);
+    checks.push(checkbox);
+    checkbox.onchange = () => {
+     if (checkbox.checked) selected.add(record.id);
+     else selected.delete(record.id);
+     updateMonth();
+     updateButtons();
+    };
+    const date = record.date.split('-').reverse().join('.');
+    label.append(checkbox, date);
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(record.photo);
+    thumbnailUrls.push(link.href);
+    link.target = '_blank';
+    link.rel = 'noopener';
+    const image = document.createElement('img');
+    image.loading = 'lazy';
+    image.src = link.href;
+    image.alt = 'Відкрити фото чека за ' + date;
+    link.append(image);
+    const remove = document.createElement('button');
+    remove.textContent = 'Видалити';
+    remove.onclick = () => {
+     if (!busy && confirm('Прибрати цей чек зі спільного списку для обох учасників?')) run(async () => {
+      await ready();
+      const removed = await request(query(identity(record)),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({deleted_at:new Date().toISOString()})});
+      if (removed.length !== 1) throw Error('Чек не змінено. Онови список.');
+      records = records.filter(item => item.id !== record.id);
+      selected.delete(record.id);
+      renderList();
+      status.textContent = 'Чек видалено.';
+     });
+    };
+    row.append(link, label, remove);
+    section.append(row);
+   }
   }
   updateButtons();
  }
@@ -292,6 +333,8 @@
   context = {url:cloudConfig.url,board:cloudConfig.workspace,user:userId};
   scope = JSON.stringify([context.url, context.board, context.user]);
   form.reset();
+  $('#receiptEntry').open = takePhoto;
+  $('#receiptSort').value = 'desc';
   stopCamera();
   records = [];
   selected.clear();
@@ -317,6 +360,7 @@
  form.onsubmit = event => event.preventDefault();
  video.onloadeddata = updateButtons;
  for (const input of [$('#receiptsFrom'), $('#receiptsTo')]) input.onchange = () => run(loadRecords);
+ $('#receiptSort').onchange = renderList;
  $('#receiptRefresh').onclick = () => run(refresh);
  $('#receiptSelectAll').onclick = () => {
   visibleRecords().forEach(record => selected.add(record.id));
@@ -358,7 +402,7 @@
   append('xref\n0 ' + offsets.length + '\n0000000000 65535 f \n' +
    offsets.slice(1).map(offset => String(offset).padStart(10, '0') + ' 00000 n \n').join('') +
    'trailer\n<< /Size ' + offsets.length + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n');
-  return new File(parts, 'MasterPlan-cheky-' + items[0].date + '_' + items.at(-1).date + '.pdf', {type:'application/pdf'});
+  return new File(parts, 'MasterPlan-cheky-' + [items[0].date, items.at(-1).date].sort().join('_') + '.pdf', {type:'application/pdf'});
  }
 
  function download(file) {
