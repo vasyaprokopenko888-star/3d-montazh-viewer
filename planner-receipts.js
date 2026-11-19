@@ -3,6 +3,7 @@
  const form = $('#receiptForm');
  const video = $('#receiptVideo');
  let stream;
+ let cameraGeneration = 0;
  const status = $('#receiptStatus');
  const selected = new Set();
  const thumbnailUrls = [];
@@ -143,6 +144,7 @@
  }
 
  function stopCamera() {
+  cameraGeneration++;
   stream?.getTracks().forEach(track => track.stop());
   stream = null;
   video.srcObject = null;
@@ -151,10 +153,16 @@
 
  async function startCamera() {
   stopCamera();
+  const generation = cameraGeneration;
   try {
-   stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{
+   const nextStream = await navigator.mediaDevices.getUserMedia({audio:false, video:{
     facingMode:{ideal:'environment'}, width:{ideal:2560}, height:{ideal:1920}
    }});
+   if (generation !== cameraGeneration || document.hidden) {
+    nextStream.getTracks().forEach(track => track.stop());
+    return;
+   }
+   stream = nextStream;
    video.srcObject = stream;
    $('#receiptCameraError').textContent = '';
    $('#receiptCapture').showModal();
@@ -182,12 +190,11 @@
   await loadRecords();
  }
 
- async function savePhoto(image, closeAfterShot = false) {
+ async function savePhoto(image, cameraShot = false) {
   assertContext();
   const record = {...image, scope, id:uid(), date:$('#receiptDate').value || localToday(), autoCapture:true};
   await access('readwrite', store => store.add(record));
-  stopCamera();
-  if (closeAfterShot) dialog.close();
+
   status.textContent = 'Синхронізую чек…';
   try {
    await ready();
@@ -196,7 +203,7 @@
    throw Error('Чек збережено на пристрої. Для синхронізації відкрий «Загальні витрати» з інтернетом або натисни «Оновити чеки».');
   }
   await access('readwrite', store => store.delete(record.id));
-  if (closeAfterShot) { toast('Чек збережено у «Загальні витрати».'); return; }
+  if (cameraShot) { $('#receiptCameraError').textContent = 'Чек збережено ✓'; return; }
   $('#receiptsFrom').value = '';
   $('#receiptsTo').value = '';
   await loadRecords();
@@ -204,13 +211,32 @@
  }
 
  $('#receiptCamera').onclick = () => run(startCamera);
- $('#receiptCameraClose').onclick = () => { if (!busy) stopCamera(); };
+ function dismissCamera() {
+  stopCamera();
+  if (dialog.open) dialog.close();
+ }
+ $('#receiptCameraClose').onclick = dismissCamera;
+ let swipeStart = null;
+ video.style.touchAction = 'none';
+ video.addEventListener('pointerdown', event => {
+  if (!event.isPrimary) return;
+  swipeStart = {x:event.clientX, y:event.clientY, id:event.pointerId};
+  video.setPointerCapture(event.pointerId);
+ });
+ video.addEventListener('pointerup', event => {
+  if (!swipeStart || swipeStart.id !== event.pointerId) return;
+  const distance = Math.hypot(event.clientX - swipeStart.x, event.clientY - swipeStart.y);
+  swipeStart = null;
+  if (distance >= 70) dismissCamera();
+ });
+ video.addEventListener('pointercancel', () => { swipeStart = null; });
  $('#receiptCapture').oncancel = event => {
   event.preventDefault();
-  if (!busy) stopCamera();
+  dismissCamera();
  };
  $('#receiptShot').onclick = () => run(async () => {
   try {
+   $('#receiptCameraError').textContent = 'Зберігаю чек…';
    await savePhoto(await toJpeg(video, video.videoWidth, video.videoHeight), true);
   } catch (error) {
    $('#receiptCameraError').textContent = error.message || 'Не вдалося зберегти чек.';
@@ -333,7 +359,7 @@
    status.textContent = error.message || 'Не вдалося виконати дію. Спробуй ще раз.';
    if (!dialog.open) toast(status.textContent);
   }
-  finally { busy = false; updateButtons(); }
+  finally { busy = false; updateButtons(); document.dispatchEvent(new Event('receipt-operation-complete')); }
  }
 
  function openReceipts(takePhoto) {
@@ -370,11 +396,22 @@
   document.title = 'Камера чеків';
   let pendingLaunch = true;
   function launchWhenReady() {
-   if (!pendingLaunch || !cloudSession || cloudRevision === null || document.querySelector('dialog[open]')) return;
+   if (!pendingLaunch || busy || document.hidden || !cloudSession || cloudRevision === null || document.querySelector('dialog[open]')) return;
    pendingLaunch = false;
    openReceipts(true);
   }
   document.addEventListener('planner-board-ready', launchWhenReady);
+  document.addEventListener('receipt-operation-complete', launchWhenReady);
+  document.addEventListener('visibilitychange', () => {
+   if (document.hidden) {
+    pendingLaunch = true;
+    dismissCamera();
+   } else launchWhenReady();
+  });
+  window.addEventListener('pageshow', event => {
+   if (event.persisted) pendingLaunch = true;
+   launchWhenReady();
+  });
   for (const gate of [$('#cloudGate'), $('#passwordGate')]) gate.addEventListener('close', launchWhenReady);
   launchWhenReady();
  }
