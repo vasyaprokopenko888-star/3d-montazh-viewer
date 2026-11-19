@@ -163,6 +163,7 @@ main{padding:10px 6px}nav{gap:5px;margin-bottom:9px}nav button{font-size:12px;pa
  width:100%;height:100vh;height:100dvh;max-width:none;max-height:none;
  overflow:hidden;background:#000;color:#fff;
 }
+.scan-guide {position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
 #scanToggle {position:absolute;right:14px;top:calc(env(safe-area-inset-top,0px) + 12px);background:#242424;color:white;border:1px solid white;border-radius:24px;padding:10px 16px}
 #scanToggle[aria-pressed=true] {background:#00644d}
 #scanShot,#scanResult {display:none}
@@ -1225,8 +1226,34 @@ initParentOrders();render();bootCloud();
  const shot = camera.querySelector('#scanShot');
  let session;
 
+function markedStrip(frame, first, last, heightRatio) {
+ const dx = last.x-first.x, dy = last.y-first.y;
+ const length = Math.hypot(dx,dy);
+ const strip = document.createElement('canvas');
+ strip.width = 540;
+ strip.height = Math.round(450*heightRatio);
+ const ctx = strip.getContext('2d');
+ ctx.fillStyle = 'white';
+ ctx.fillRect(0,0,strip.width,strip.height);
+ ctx.translate(strip.width/2,strip.height/2);
+ ctx.scale(450/length,450/length);
+ ctx.rotate(-Math.atan2(dy,dx));
+ ctx.drawImage(frame,-(first.x+last.x)/2,-(first.y+last.y)/2);
+ return strip;
+}
+
+ function clearFrame(current) {
+  if (!current?.frame) return;
+  const frame=current.frame;
+  frame.onpointerup=null;
+  frame.remove();
+  frame.width=frame.height=0;
+  current.frame=null;
+  shot.textContent='Сканувати';
+ }
  function stop() {
   const old = session;
+  clearFrame(old);
   session = null;
   shot.disabled = true;
   shot.onclick = null;
@@ -1382,8 +1409,67 @@ function verticalLabelLines(rgba, width, height) {
    stop();
    camera.querySelector('#receiptCameraError').textContent = 'Не вдалося зчитати номер. Перевірте інтернет і знову натисніть «Сканування».';
   }
+  function describe(number) {
+   const labels = [...new Set(inspectOrderNumbers(orders, number).map(hit => hit.order + '\n' + hit.material))];
+   show('mkf-' + number + ' · ' + (labels.join('\n') || 'Замовлення не знайдено'));
+  }
+  function guide(frame) {
+   current.frame = frame;
+   frame.className = 'scan-guide';
+   video.after(frame);
+   shot.textContent = 'Новий кадр';
+   let first = null;
+   const prompt = 'Торкніться літери m на початку номера.';
+   show('Номер не зчитано. ' + prompt);
+   frame.onpointerup = async event => {
+    if (!active() || shot.disabled || !event.isPrimary) return;
+    const box = frame.getBoundingClientRect();
+    const point = {x:(event.clientX-box.left)*frame.width/box.width,y:(event.clientY-box.top)*frame.height/box.height};
+    if (!first) {
+     first = point;
+     show('Тепер торкніться останньої цифри номера.');
+     return;
+    }
+    const begin = first;
+    first = null;
+    if (Math.hypot(point.x-begin.x,point.y-begin.y)<20) { show(prompt); return; }
+    shot.disabled = true;
+    show('Зчитую вказаний рядок…');
+    try {
+     current.timer = setTimeout(fail,90000);
+     await current.worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'mkfMKF-0123456789 '});
+     for (const height of [.26,.32,.22,.38]) {
+      if (!active()) return;
+      const strip = markedStrip(frame,begin,point,height);
+      try {
+       const {data} = await current.worker.recognize(strip);
+       if (!active()) return;
+       const numbers = labelNumbers(data.text.replace(/(\d)[ \t]+(?=\d)/g,'$1'));
+       if (numbers.length===1) {
+        describe(numbers[0]); clearFrame(current); return;
+       }
+      } finally { strip.width = strip.height = 0; }
+     }
+     show('Не зчитано. ' + prompt + ' Або зробіть новий кадр.');
+    } catch { fail(); }
+    finally {
+     clearTimeout(current.timer);
+     if (active()) {
+      try { await current.worker.setParameters({tessedit_pageseg_mode:'11',tessedit_char_whitelist:''}); }
+      catch { fail(); }
+      if (active()) shot.disabled=false;
+     }
+    }
+   };
+  }
+
   async function scan() {
    if (!active() || shot.disabled) return;
+   if (current.frame) {
+    clearFrame(current);
+    show('Наведіть камеру на етикетку й натисніть «Сканувати».');
+    return;
+   }
    if (video.readyState < 2 || !video.videoWidth) {
     show('Камера запускається. Натисніть ще раз.');
     return;
@@ -1413,13 +1499,9 @@ function verticalLabelLines(rgba, width, height) {
      }
     }
     if (!active()) return;
-    if (!numbers.length) show('Номер mkf- не зчитано. Зніміть етикетку ближче.');
+    if (!numbers.length) { guide(snapshot); snapshot=null; }
     else if (numbers.length > 1) show('Зчитано кілька номерів. Зніміть одну етикетку.');
-    else {
-     const number = numbers[0];
-     const labels = [...new Set(inspectOrderNumbers(orders, number).map(hit => hit.order + '\n' + hit.material))];
-     show('mkf-' + number + ' · ' + (labels.join('\n') || 'Замовлення не знайдено'));
-    }
+    else describe(numbers[0]);
    } catch { fail(); }
    finally {
     if (snapshot) snapshot.width = snapshot.height = 0;
