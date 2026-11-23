@@ -546,7 +546,7 @@ async function prepare(model,names){model.userData.moduleLookupRoot=true;model.u
   o.userData.service=service;o.userData.label=label;
   o.userData.hardware=hardware;o.userData.hardwareAnnotation=annotation;
   if(o.isMesh&&annotation)o.layers.set(annotationLayer);
- if(o.isMesh||o.isLine){for(const mat of [].concat(o.material||[]))if(!shared.has(mat))oldMats.add(mat);if(service)counts.service++;if(o.isMesh){o.userData.sourceMaterials=o.material;counts.mesh++;meshes.push(o);}else{counts.lines++;lines.push(o);}}for(const child of o.children)visit(child,service,label,hardware,annotation);}
+ if(o.isMesh||o.isLine){const position=o.geometry?.getAttribute('position');const vertexCount=o.geometry?.index?.count??position?.count??0;if(!position||vertexCount<(o.isMesh?3:2)){o.visible=false;return;}for(const mat of [].concat(o.material||[]))if(!shared.has(mat))oldMats.add(mat);if(service)counts.service++;if(o.isMesh){o.userData.sourceMaterials=o.material;counts.mesh++;meshes.push(o);}else{counts.lines++;lines.push(o);}}for(const child of o.children)visit(child,service,label,hardware,annotation);}
  visit(model);const groups=new Map(),candidates=new Map();
  for(const m of meshes){if(m.userData.service){m.material=m.userData.label?labelMat:hardwareMat;continue;}
  let owner=null;for(let a=m;a&&a!==model;a=a.parent){const name=a.userData.sourceName||a.name||'';if(numberedRE.test(name)||partRE.test(name)){owner=a;break;}}
