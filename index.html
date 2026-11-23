@@ -1520,19 +1520,27 @@ function labelModuleCode(line){
  const match=/M[O0]D[\s_.–-]*(\d+)(?=[\s_.-])[\s_.-]+[^(){}\n]{0,22}?[-.]\s*([A-Z]{1,4})(?=[\s_({]|$)/i.exec(line);
  return match?Number(match[1])+'-'+match[2].toUpperCase():null;
 }
+function labelPartNumbers(line){
+ // Edge thickness/count markings are not part identifiers.
+ if (/^\s*\d+(?:[.,]\d+)?\s*(?:mm|мм)?\s*\(\s*\d+\s*\)/i.test(line)) return [];
+ return [...line.matchAll(/\{\s*(\d+)\s*\}|\(\s*(\d+)\s*\)/g)].map(m=>Number(m[1]||m[2]));
+}
 function findLabelPanel(text,panels){
  const numbers=new Set(),codes=new Set();
  for(const line of text.toUpperCase().split(/\r?\n/)){
   const code=labelModuleCode(line);
   if(code)codes.add(code);
-  if(!/M[O0]D/.test(line)&&!/^\s*[(]\s*\d+\s*[)]\s*$/.test(line)&&!/ДЕТ|ДЕТАЛЬ|PANEL|PART/.test(line))continue;
-  for(const match of line.matchAll(/[({]\s*(\d+)\s*[})]/g))numbers.add(Number(match[1]));
+  for(const number of labelPartNumbers(line))numbers.add(number);
  }
  if(numbers.size>1||codes.size>1)return null;
  const [number]=numbers,[code]=codes;
  if(number===undefined&&!code)return null;
  const matches=panels.filter(panel=>{
-  if(number!==undefined&&!matchesPanelSearch(panel.name,String(number)))return false;
+  if(number!==undefined){
+   const leading=/^_*\s*(\d+)(?=[.\s_]|$)/.exec(panel.name);
+   const modelNumbers=leading?[Number(leading[1])]:labelPartNumbers(panel.name);
+   if(modelNumbers.length!==1||modelNumbers[0]!==number)return false;
+  }
   const modelCode=labelModuleCode(panel.name);
   return !code||modelCode===code||(number!==undefined&&!modelCode);
  });
@@ -1574,7 +1582,7 @@ scanInput.onchange=async()=>{
  scanInput.value='';
  if(!file||!model||loading)return;
  scanButton.disabled=true;
- scanStatus.textContent='Розпізнаю номер у рядку MOD…';
+ scanStatus.textContent='Розпізнаю номер деталі в дужках…';
  const url=URL.createObjectURL(file);
  let worker;
  try{
