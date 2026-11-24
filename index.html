@@ -605,17 +605,19 @@ async function addAutomaticHardware(model,names){
   const name=names?.get(node.name)||node.name||'';
   if(/^Hardware_/i.test(name))hasAuthoredHardware=true;
   const kind=/^_ABF_(cabineo|minifixBolts|hingeCup|sideDrillDepth)$/i.exec(name)?.[1].toLowerCase();
-  if(kind)markers.push({node,kind});
+  if(kind==='sidedrilldepth'){
+   node.traverse(child=>{if(child.isLine)markers.push({node,kind,guide:child});});
+  }else if(kind)markers.push({node,kind});
  });
  if(hasAuthoredHardware||!markers.length)return;
  const placements=[];
- for(const {node,kind} of markers){
+ for(const {node,kind,guide} of markers){
   const unitsToMeters=new THREE.Vector3().setFromMatrixColumn(node.matrixWorld,0).length();
   if(!Number.isFinite(unitsToMeters)||unitsToMeters<=0)continue;
   const millimetersPerUnit=unitsToMeters*1000;
   const inverse=node.matrixWorld.clone().invert();
   const bounds=new THREE.Box3(),point=new THREE.Vector3();
-  node.traverse(child=>{
+  (guide||node).traverse(child=>{
    if(!child.isLine)return;
    const positions=child.geometry?.getAttribute('position');
    if(!positions)return;
@@ -649,19 +651,21 @@ async function addAutomaticHardware(model,names){
     if(!/^_ABF_sideDrill$/i.test(names?.get(sibling.name)||sibling.name||''))continue;
     const relation=inverse.clone().multiply(sibling.matrixWorld);
     if(new THREE.Vector3().setFromMatrixPosition(relation).length()*millimetersPerUnit>.1)continue;
-    const circle=new THREE.Box3();
+    const guideAxis=dimensions.findIndex((span,i)=>i!==axis&&near(span,section[1]));
+    if(guideAxis<0)continue;
     sibling.traverse(child=>{
      const positions=child.isLine&&child.geometry?.getAttribute('position');
      if(!positions)return;
+     const circle=new THREE.Box3();
      const local=inverse.clone().multiply(child.matrixWorld);
      for(let i=0;i<positions.count;i++)circle.expandByPoint(point.fromBufferAttribute(positions,i).applyMatrix4(local));
+     if(circle.isEmpty())return;
+     const diameter=circle.getSize(new THREE.Vector3()).multiplyScalar(millimetersPerUnit).toArray();
+     const mouth=circle.getCenter(new THREE.Vector3());
+     if(near(mouth.getComponent(guideAxis)*millimetersPerUnit,center.getComponent(guideAxis))&&
+        diameter.every((span,i)=>near(span,i===axis?0:section[1]))&&
+        !candidates.some(existing=>existing.distanceTo(mouth)*millimetersPerUnit<.1))candidates.push(mouth);
     });
-    if(circle.isEmpty())continue;
-    const diameter=circle.getSize(new THREE.Vector3()).multiplyScalar(millimetersPerUnit).toArray();
-    const mouth=circle.getCenter(new THREE.Vector3());
-    const guideAxis=dimensions.findIndex((span,i)=>i!==axis&&near(span,section[1]));
-    if(guideAxis>=0&&near(mouth.getComponent(guideAxis)*millimetersPerUnit,center.getComponent(guideAxis))&&
-       diameter.every((span,i)=>near(span,i===axis?0:section[1])))candidates.push(mouth);
    }
    if(candidates.length!==1)continue;
    entry=candidates[0];
