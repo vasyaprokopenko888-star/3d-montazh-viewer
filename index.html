@@ -658,7 +658,10 @@ async function addAutomaticHardware(model,names){
     });
     if(circle.isEmpty())continue;
     const diameter=circle.getSize(new THREE.Vector3()).multiplyScalar(millimetersPerUnit).toArray();
-    if(diameter.every((span,i)=>near(span,i===axis?0:section[1])))candidates.push(circle.getCenter(new THREE.Vector3()));
+    const mouth=circle.getCenter(new THREE.Vector3());
+    const guideAxis=dimensions.findIndex((span,i)=>i!==axis&&near(span,section[1]));
+    if(guideAxis>=0&&near(mouth.getComponent(guideAxis)*millimetersPerUnit,center.getComponent(guideAxis))&&
+       diameter.every((span,i)=>near(span,i===axis?0:section[1])))candidates.push(mouth);
    }
    if(candidates.length!==1)continue;
    entry=candidates[0];
