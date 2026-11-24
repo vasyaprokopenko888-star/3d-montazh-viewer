@@ -700,6 +700,12 @@ async function addAutomaticHardware(model,names){
  const added={hinge:0,rafix:0,cam:0,confirmat:0,dowel:0};
  for(const {node,keys,transform} of placements){
   added[keys[0]]++;
+  // ABF lines may be hidden after batching. Keep solid hardware outside those line objects.
+  const hardwareGroup=new THREE.Group();
+  hardwareGroup.name='Hardware_AutoAssembly';
+  hardwareGroup.matrixAutoUpdate=false;
+  hardwareGroup.matrix.copy(node.matrix);
+  node.parent.add(hardwareGroup);
   for(const key of keys){
    if(!geometries.has(key))geometries.set(key,templates.has(key)?templates.get(key).clone():makeEdgeFastener(key));
    const mesh=new THREE.Mesh(geometries.get(key),automaticHardwareMaterial);
@@ -707,7 +713,7 @@ async function addAutomaticHardware(model,names){
    mesh.userData.automaticHardware=true;
    mesh.matrixAutoUpdate=false;
    mesh.matrix.copy(transform);
-   node.add(mesh);
+   hardwareGroup.add(mesh);
   }
  }
  model.userData.automaticHardwareCounts=added;
