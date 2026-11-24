@@ -562,6 +562,40 @@ async function loadAutomaticHardwareTemplates(){
  }
  return automaticHardwareTemplates;
 }
+
+function makeEdgeFastener(key){
+ const dowel=key==='dowel',position=[],indices=[],radial=48;
+ const start=dowel?-10:-16,end=dowel?25:34,steps=dowel?16:144;
+ for(let i=0;i<=steps;i++){
+  const x=start+(end-start)*i/steps;
+  for(let j=0;j<radial;j++){
+   const angle=j*Math.PI*2/radial;
+   let radius;
+   if(dowel){
+    const flute=((1-Math.cos(12*angle))/2)**3;
+    radius=4-.22*flute-.4*Math.max(0,1-Math.min(x-start,end-x));
+   }else if(x<-14){
+    radius=5-(x+16)*.8;
+   }else if(x<=0){
+    radius=3.2;
+   }else{
+    const fade=Math.min(1,x/.65,(end-x)/1.5);
+    radius=3.2-.58*fade*(1+Math.cos(x*Math.PI*2/3.2-angle))/2;
+   }
+   position.push(x,radius*Math.cos(angle),radius*Math.sin(angle));
+  }
+ }
+ for(let i=0;i<steps;i++)for(let j=0;j<radial;j++){
+  const a=i*radial+j,b=i*radial+(j+1)%radial;
+  indices.push(a,b,b+radial,a,b+radial,a+radial);
+ }
+ for(let j=1;j<radial-1;j++)indices.push(0,j+1,j,steps*radial,steps*radial+j,steps*radial+j+1);
+ const geometry=new THREE.BufferGeometry();
+ geometry.setAttribute('position',new THREE.Float32BufferAttribute(position,3));
+ geometry.setIndex(indices);geometry.computeVertexNormals();
+ return geometry;
+}
+
 async function addAutomaticHardware(model,names){
  if(typeof DecompressionStream!=='function')return;
  const markers=[];
@@ -570,7 +604,7 @@ async function addAutomaticHardware(model,names){
  model.traverse(node=>{
   const name=names?.get(node.name)||node.name||'';
   if(/^Hardware_/i.test(name))hasAuthoredHardware=true;
-  const kind=/^_ABF_(cabineo|minifixBolts|hingeCup)$/i.exec(name)?.[1].toLowerCase();
+  const kind=/^_ABF_(cabineo|minifixBolts|hingeCup|sideDrillDepth)$/i.exec(name)?.[1].toLowerCase();
   if(kind)markers.push({node,kind});
  });
  if(hasAuthoredHardware||!markers.length)return;
@@ -597,6 +631,18 @@ async function addAutomaticHardware(model,names){
   if(kind==='hingecup'&&near(size.x,47)&&near(size.y,35)&&near(size.z,0)&&near(Math.abs(center.y),22.5)){
    x.set(0,Math.sign(center.y),0);y.set(0,0,1);z.set(-1,0,0);
    keys=['hinge'];
+  }else if(kind==='sidedrilldepth'){
+   const dimensions=size.toArray();
+   const axis=dimensions.indexOf(Math.max(...dimensions));
+   const section=dimensions.filter((_,i)=>i!==axis).sort((a,b)=>a-b);
+   const depth=dimensions[axis];
+   if(!near(section[0],0)||!near(Math.abs(center.getComponent(axis)),depth/2))continue;
+   if(near(depth,34)&&near(section[1],4.5))keys=['confirmat'];
+   else if(near(depth,25)&&near(section[1],8))keys=['dowel'];
+   else continue;
+   x.setComponent(axis,Math.sign(center.getComponent(axis)));
+   z.setComponent(dimensions.indexOf(section[0]),1);
+   y.crossVectors(z,x);
   }else if(kind==='cabineo'||kind==='minifixbolts'){
    const isRafix=kind==='cabineo';
    const diameter=isRafix?20:15,offset=isRafix?9.5:34;
@@ -631,11 +677,11 @@ async function addAutomaticHardware(model,names){
  let templates;
  try{templates=await loadAutomaticHardwareTemplates();}catch(error){console.warn('Unable to load hardware templates',error);return;}
  const geometries=new Map();
- const added={hinge:0,rafix:0,cam:0};
+ const added={hinge:0,rafix:0,cam:0,confirmat:0,dowel:0};
  for(const {node,keys,transform} of placements){
   added[keys[0]]++;
   for(const key of keys){
-   if(!geometries.has(key))geometries.set(key,templates.get(key).clone());
+   if(!geometries.has(key))geometries.set(key,templates.has(key)?templates.get(key).clone():makeEdgeFastener(key));
    const mesh=new THREE.Mesh(geometries.get(key),automaticHardwareMaterial);
    mesh.name='Hardware_Auto_'+key;
    mesh.userData.automaticHardware=true;
@@ -650,6 +696,7 @@ async function addAutomaticHardware(model,names){
 
 async function prepare(model,names){model.userData.moduleLookupRoot=true;model.updateMatrixWorld(true);const meshes=[],lines=[],oldMats=new Set();counts={mesh:0,lines:0,service:0,labels:0,unknown:[]};
  function visit(o,service=false,label=false,hardware=false,annotation=false){const source=names?.get(o.name);if(source!==undefined)o.userData.sourceName=source;const name=o.userData.sourceName||o.name||'';if(/ABF[\s_.-]*Label/i.test(name))counts.labels++;service=service||serviceRE.test(name)||labelRE.test(name)||productRE.test(name);label=label||labelRE.test(name);annotation=annotation||label||hardwareAnnotationRE.test(name);
+  if(o.userData.automaticHardware)annotation=false;
   hardware=!annotation&&(hardware||hardwareNameRE.test(name)||service);
   o.userData.service=service;o.userData.label=label;
   o.userData.hardware=hardware;o.userData.hardwareAnnotation=annotation;
@@ -696,7 +743,7 @@ async function install(model,name,names){let next;try{next=await prepare(model,n
  // Center only the top-level scene; per-part transforms and dimensions remain intact.
  const center=new THREE.Box3().setFromObject(root).getCenter(new THREE.Vector3());root.position.sub(center);root.updateMatrixWorld(true);
  fitModelGround(root);
- discoverModules();$('parts').replaceChildren(new Option('Виберіть деталь…',''),...parts.map(p=>new Option(p.name,String(p.id))));$('parts').disabled=!parts.length;$('empty').hidden=true;let diag=$('diagnostics');if(!diag){diag=document.createElement('p');diag.id='diagnostics';$('tools').querySelector('details').appendChild(diag);}diag.textContent=counts.unknown.length?'Невизначені поверхні залишено непрозорими ('+counts.unknown.length+'): '+[...new Set(counts.unknown)].join(', '):'Усі поверхні класифіковано.';if(model.userData.automaticHardwareCounts){const {hinge,rafix,cam}=model.userData.automaticHardwareCounts;diag.textContent+=` Автоматично додано: петлі — ${hinge}, корпусні стяжки — ${rafix}, мініфікси — ${cam}.`;}if(hardwareView.checked)applyMode();refresh();fit();}
+ discoverModules();$('parts').replaceChildren(new Option('Виберіть деталь…',''),...parts.map(p=>new Option(p.name,String(p.id))));$('parts').disabled=!parts.length;$('empty').hidden=true;let diag=$('diagnostics');if(!diag){diag=document.createElement('p');diag.id='diagnostics';$('tools').querySelector('details').appendChild(diag);}diag.textContent=counts.unknown.length?'Невизначені поверхні залишено непрозорими ('+counts.unknown.length+'): '+[...new Set(counts.unknown)].join(', '):'Усі поверхні класифіковано.';if(model.userData.automaticHardwareCounts){const {hinge,rafix,cam,confirmat,dowel}=model.userData.automaticHardwareCounts;diag.textContent+=` Автоматично додано: петлі — ${hinge}, корпусні стяжки — ${rafix}, мініфікси — ${cam}, конфірмати — ${confirmat}, шканти — ${dowel}.`;}if(hardwareView.checked)applyMode();refresh();fit();}
 let currentProject=[];
 async function projectEntries(files){const entries=[...files].map(file=>({path:file.webkitRelativePath||file.name,file}));if(entries.length===1&&/\.zip$/i.test(entries[0].path)){
  $('busy').textContent='Розпакування ZIP…';const {unzip}=await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js');let total=0,count=0,tooLarge=false;
