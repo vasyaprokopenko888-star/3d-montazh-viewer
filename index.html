@@ -627,7 +627,7 @@ async function addAutomaticHardware(model,names){
   const center=bounds.getCenter(new THREE.Vector3()).multiplyScalar(millimetersPerUnit);
   const near=(value,target)=>Math.abs(value-target)<.8;
   const x=new THREE.Vector3(),y=new THREE.Vector3(),z=new THREE.Vector3();
-  let keys;
+  let keys,entry;
   if(kind==='hingecup'&&size.x>0&&size.y>0&&near(size.z,0)&&Math.abs(center.y)>.8){
    x.set(0,Math.sign(center.y),0);y.set(0,0,1);z.set(-1,0,0);
    keys=['hinge'];
@@ -643,6 +643,25 @@ async function addAutomaticHardware(model,names){
    x.setComponent(axis,Math.sign(center.getComponent(axis)));
    z.setComponent(dimensions.indexOf(section[0]),1);
    y.crossVectors(z,x);
+   // ABF depth lines lie on a panel face, while the drill circle marks the true bore axis.
+   const candidates=[];
+   for(const sibling of node.parent.children){
+    if(!/^_ABF_sideDrill$/i.test(names?.get(sibling.name)||sibling.name||''))continue;
+    const relation=inverse.clone().multiply(sibling.matrixWorld);
+    if(new THREE.Vector3().setFromMatrixPosition(relation).length()*millimetersPerUnit>.1)continue;
+    const circle=new THREE.Box3();
+    sibling.traverse(child=>{
+     const positions=child.isLine&&child.geometry?.getAttribute('position');
+     if(!positions)return;
+     const local=inverse.clone().multiply(child.matrixWorld);
+     for(let i=0;i<positions.count;i++)circle.expandByPoint(point.fromBufferAttribute(positions,i).applyMatrix4(local));
+    });
+    if(circle.isEmpty())continue;
+    const diameter=circle.getSize(new THREE.Vector3()).multiplyScalar(millimetersPerUnit).toArray();
+    if(diameter.every((span,i)=>near(span,i===axis?0:section[1])))candidates.push(circle.getCenter(new THREE.Vector3()));
+   }
+   if(candidates.length!==1)continue;
+   entry=candidates[0];
   }else if(kind==='cabineo'||kind==='minifixbolts'){
    const isRafix=kind==='cabineo';
    const diameter=isRafix?20:15,offset=isRafix?9.5:34;
@@ -671,6 +690,7 @@ async function addAutomaticHardware(model,names){
    keys=isRafix?['rafix','rod']:['cam','bolt'];
   }else continue;
   const transform=new THREE.Matrix4().makeBasis(x,y,z).scale(new THREE.Vector3().setScalar(1/millimetersPerUnit));
+  if(entry)transform.setPosition(entry);
   placements.push({node,keys,transform});
  }
  if(!placements.length)return;
