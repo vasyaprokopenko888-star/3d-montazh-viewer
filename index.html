@@ -697,6 +697,33 @@ async function addAutomaticHardware(model,names){
    z.setComponent(flat,intoPanel);
    y.crossVectors(z,x);
    keys=isRafix?['rafix','rod']:['cam','bolt'];
+   if(!isRafix){
+    const shaftAxis=x.toArray().findIndex(value=>near(Math.abs(value),1));
+    if(shaftAxis>=0)for(const sibling of node.parent.children){
+     const name=names?.get(sibling.name)||sibling.name||'';
+     if(!/^_ABF_sideDrill(Depth)?$/i.test(name))continue;
+     const isDepth=/Depth$/i.test(name);
+     const relation=inverse.clone().multiply(sibling.matrixWorld);
+     if(new THREE.Vector3().setFromMatrixPosition(relation).length()*millimetersPerUnit>.1)continue;
+     sibling.traverse(child=>{
+      const positions=child.isLine&&child.geometry?.getAttribute('position');
+      if(!positions)return;
+      const box=new THREE.Box3(),local=inverse.clone().multiply(child.matrixWorld);
+      for(let i=0;i<positions.count;i++)box.expandByPoint(point.fromBufferAttribute(positions,i).applyMatrix4(local));
+      if(box.isEmpty())return;
+      const spans=box.getSize(new THREE.Vector3()).multiplyScalar(millimetersPerUnit).toArray();
+      const middle=box.getCenter(new THREE.Vector3()).multiplyScalar(millimetersPerUnit);
+      if(isDepth){
+       const other=spans.filter((_,axis)=>axis!==shaftAxis).sort((a,b)=>a-b);
+       if(near(spans[shaftAxis],33)&&near(other[0],0)&&near(other[1],8)&&
+          near(middle.getComponent(shaftAxis)*x.getComponent(shaftAxis),16.5)&&
+          middle.toArray().every((value,axis)=>axis===shaftAxis||near(value,0)))representedGuides.push(child);
+      }else if(spans.every((span,axis)=>near(span,axis===shaftAxis?0:8))&&
+          near(middle.getComponent(shaftAxis),0)&&
+          middle.toArray().every((value,axis)=>axis===flat||near(value,0)))representedGuides.push(child);
+     });
+    }
+   }
   }else continue;
   const transform=new THREE.Matrix4().makeBasis(x,y,z).scale(new THREE.Vector3().setScalar(1/millimetersPerUnit));
   if(entry)transform.setPosition(entry);
