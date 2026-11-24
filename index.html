@@ -628,7 +628,7 @@ async function addAutomaticHardware(model,names){
   const near=(value,target)=>Math.abs(value-target)<.8;
   const x=new THREE.Vector3(),y=new THREE.Vector3(),z=new THREE.Vector3();
   let keys;
-  if(kind==='hingecup'&&near(size.x,47)&&near(size.y,35)&&near(size.z,0)&&near(Math.abs(center.y),22.5)){
+  if(kind==='hingecup'&&size.x>0&&size.y>0&&near(size.z,0)&&Math.abs(center.y)>.8){
    x.set(0,Math.sign(center.y),0);y.set(0,0,1);z.set(-1,0,0);
    keys=['hinge'];
   }else if(kind==='sidedrilldepth'){
