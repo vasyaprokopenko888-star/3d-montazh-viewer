@@ -598,12 +598,21 @@ function makeEdgeFastener(key){
 
 async function addAutomaticHardware(model,names){
  if(typeof DecompressionStream!=='function')return;
- const markers=[];
+ const markers=[],hingePlates=[];
  let hasAuthoredHardware=false;
  model.updateMatrixWorld(true);
  model.traverse(node=>{
   const name=names?.get(node.name)||node.name||'';
   if(/^Hardware_/i.test(name))hasAuthoredHardware=true;
+  if(/^_ABF_hingeMountingPlate$/i.test(name)){
+   const points=new THREE.Box3(),point=new THREE.Vector3();
+   node.traverse(child=>{
+    const positions=child.isLine&&child.geometry?.getAttribute('position');
+    if(!positions)return;
+    for(let i=0;i<positions.count;i++)points.expandByPoint(point.fromBufferAttribute(positions,i).applyMatrix4(child.matrixWorld));
+   });
+   if(!points.isEmpty())hingePlates.push(points.getCenter(new THREE.Vector3()));
+  }
   const kind=/^_ABF_(cabineo|minifixBolts|hingeCup|sideDrillDepth|minifixPlasticBase)$/i.exec(name)?.[1].toLowerCase();
   if(kind==='sidedrilldepth'||kind==='minifixplasticbase'){
    node.traverse(child=>{if(child.isLine)markers.push({node,kind,guide:child});});
@@ -629,10 +638,18 @@ async function addAutomaticHardware(model,names){
   const center=bounds.getCenter(new THREE.Vector3()).multiplyScalar(millimetersPerUnit);
   const near=(value,target)=>Math.abs(value-target)<.8;
   const x=new THREE.Vector3(),y=new THREE.Vector3(),z=new THREE.Vector3();
-  let keys,entry;
+  let keys,entry,hingeOffset=0;
   let representedGuides=[];
   if(kind==='hingecup'&&size.x>0&&size.y>0&&near(size.z,0)&&Math.abs(center.y)>.8){
    x.set(0,Math.sign(center.y),0);y.set(0,0,1);z.set(-1,0,0);
+   const candidates=hingePlates.map(plate=>plate.clone().applyMatrix4(inverse).multiplyScalar(millimetersPerUnit))
+    .filter(plate=>Math.abs(plate.x-center.x)<3&&Math.abs(plate.y-center.y)<38&&Math.abs(Math.abs(plate.z-center.z)-37)<6)
+    .sort((a,b)=>Math.abs(a.x-center.x)-Math.abs(b.x-center.x));
+   if(candidates.length===1){
+    const plate=candidates[0];
+    y.set(0,0,Math.sign(plate.z-center.z));
+    hingeOffset=Math.round((plate.dot(x)-16)*10)/10;
+   }
    keys=['hinge'];
   }else if(kind==='sidedrilldepth'){
    const dimensions=size.toArray();
@@ -747,7 +764,7 @@ async function addAutomaticHardware(model,names){
   const transform=new THREE.Matrix4().makeBasis(x,y,z).scale(new THREE.Vector3().setScalar(1/millimetersPerUnit));
   if(entry)transform.setPosition(entry);
   if(!guide)node.traverse(child=>{if(child.isLine)representedGuides.push(child);});
-  placements.push({node,keys,transform,representedGuides});
+  placements.push({node,keys,transform,representedGuides,hingeOffset});
  }
  if(!placements.length)return;
  const minifixOrigins=placements.filter(({keys})=>keys[0]==='cam')
@@ -761,7 +778,7 @@ async function addAutomaticHardware(model,names){
  try{templates=await loadAutomaticHardwareTemplates();}catch(error){console.warn('Unable to load hardware templates',error);return;}
  const geometries=new Map();
  const added={hinge:0,rafix:0,cam:0,confirmat:0,dowel:0,support:0};
- for(const {node,keys,transform,representedGuides} of placements){
+ for(const {node,keys,transform,representedGuides,hingeOffset} of placements){
   representedGuides.forEach(line=>line.userData.representedHardwareGuide=true);
   if(!keys.length)continue;
   added[keys[0]]++;
@@ -772,8 +789,21 @@ async function addAutomaticHardware(model,names){
   hardwareGroup.matrix.copy(node.matrix);
   node.parent.add(hardwareGroup);
   for(const key of keys){
-   if(!geometries.has(key))geometries.set(key,templates.has(key)?templates.get(key).clone():key==='support'?new THREE.CylinderGeometry(2.5,2.5,20,32).rotateZ(-Math.PI/2).translate(3,0,0):makeEdgeFastener(key));
-   const mesh=new THREE.Mesh(geometries.get(key),automaticHardwareMaterial);
+   const geometryKey=key==='hinge'?`hinge:${hingeOffset}`:key;
+   if(!geometries.has(geometryKey)){
+    const geometry=templates.has(key)?templates.get(key).clone():key==='support'?new THREE.CylinderGeometry(2.5,2.5,20,32).rotateZ(-Math.PI/2).translate(3,0,0):makeEdgeFastener(key);
+    if(key==='hinge'&&hingeOffset){
+     const positions=geometry.getAttribute('position');
+     for(let i=0;i<positions.count;i++){
+      const weight=THREE.MathUtils.smoothstep(positions.getY(i),7,25);
+      positions.setX(i,positions.getX(i)+hingeOffset*weight);
+     }
+     positions.needsUpdate=true;
+     geometry.computeVertexNormals();
+    }
+    geometries.set(geometryKey,geometry);
+   }
+   const mesh=new THREE.Mesh(geometries.get(geometryKey),automaticHardwareMaterial);
    mesh.name='Hardware_Auto_'+key;
    mesh.userData.automaticHardware=true;
    mesh.matrixAutoUpdate=false;
