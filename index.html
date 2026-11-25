@@ -604,8 +604,8 @@ async function addAutomaticHardware(model,names){
  model.traverse(node=>{
   const name=names?.get(node.name)||node.name||'';
   if(/^Hardware_/i.test(name))hasAuthoredHardware=true;
-  const kind=/^_ABF_(cabineo|minifixBolts|hingeCup|sideDrillDepth)$/i.exec(name)?.[1].toLowerCase();
-  if(kind==='sidedrilldepth'){
+  const kind=/^_ABF_(cabineo|minifixBolts|hingeCup|sideDrillDepth|minifixPlasticBase)$/i.exec(name)?.[1].toLowerCase();
+  if(kind==='sidedrilldepth'||kind==='minifixplasticbase'){
    node.traverse(child=>{if(child.isLine)markers.push({node,kind,guide:child});});
   }else if(kind)markers.push({node,kind});
  });
@@ -671,6 +671,25 @@ async function addAutomaticHardware(model,names){
    if(candidates.length!==1)continue;
    entry=candidates[0].mouth;
    representedGuides=[guide,candidates[0].line];
+  }else if(kind==='minifixplasticbase'){
+   const spans=size.toArray(),axis=spans.findIndex(span=>near(span,0));
+   if(axis<0||!spans.every((span,i)=>i===axis||near(span,5)))continue;
+   const panelBounds=new THREE.Box3();
+   for(const part of [node.parent,...node.parent.children]){
+    if(!part.isMesh||!part.geometry)continue;
+    part.geometry.computeBoundingBox();
+    const box=part.geometry.boundingBox;
+    if(box&&!box.isEmpty())panelBounds.union(box.clone().applyMatrix4(inverse.clone().multiply(part.matrixWorld)));
+   }
+   if(panelBounds.isEmpty())continue;
+   const inward=panelBounds.getCenter(new THREE.Vector3()).getComponent(axis)*millimetersPerUnit-center.getComponent(axis);
+   if(Math.abs(inward)<1)continue;
+   x.setComponent(axis,Math.sign(inward));
+   z.setComponent((axis+2)%3,1);
+   y.crossVectors(z,x);
+   entry=bounds.getCenter(new THREE.Vector3());
+   representedGuides=[guide];
+   keys=['support'];
   }else if(kind==='cabineo'||kind==='minifixbolts'){
    const isRafix=kind==='cabineo';
    const diameter=isRafix?20:15,offset=isRafix?9.5:34;
@@ -731,12 +750,20 @@ async function addAutomaticHardware(model,names){
   placements.push({node,keys,transform,representedGuides});
  }
  if(!placements.length)return;
+ const minifixOrigins=placements.filter(({keys})=>keys[0]==='cam')
+  .map(({node})=>new THREE.Vector3().setFromMatrixPosition(node.matrixWorld));
+ for(const placement of placements){
+  if(placement.keys[0]!=='support')continue;
+  const center=new THREE.Vector3().setFromMatrixPosition(placement.transform).applyMatrix4(placement.node.matrixWorld);
+  if(minifixOrigins.some(origin=>Math.abs(origin.distanceTo(center)-.009)<.0008))placement.keys=[];
+ }
  let templates;
  try{templates=await loadAutomaticHardwareTemplates();}catch(error){console.warn('Unable to load hardware templates',error);return;}
  const geometries=new Map();
- const added={hinge:0,rafix:0,cam:0,confirmat:0,dowel:0};
+ const added={hinge:0,rafix:0,cam:0,confirmat:0,dowel:0,support:0};
  for(const {node,keys,transform,representedGuides} of placements){
   representedGuides.forEach(line=>line.userData.representedHardwareGuide=true);
+  if(!keys.length)continue;
   added[keys[0]]++;
   // ABF lines may be hidden after batching. Keep solid hardware outside those line objects.
   const hardwareGroup=new THREE.Group();
@@ -745,7 +772,7 @@ async function addAutomaticHardware(model,names){
   hardwareGroup.matrix.copy(node.matrix);
   node.parent.add(hardwareGroup);
   for(const key of keys){
-   if(!geometries.has(key))geometries.set(key,templates.has(key)?templates.get(key).clone():makeEdgeFastener(key));
+   if(!geometries.has(key))geometries.set(key,templates.has(key)?templates.get(key).clone():key==='support'?new THREE.CylinderGeometry(2.5,2.5,20,32).rotateZ(-Math.PI/2).translate(3,0,0):makeEdgeFastener(key));
    const mesh=new THREE.Mesh(geometries.get(key),automaticHardwareMaterial);
    mesh.name='Hardware_Auto_'+key;
    mesh.userData.automaticHardware=true;
@@ -807,7 +834,7 @@ async function install(model,name,names){let next;try{next=await prepare(model,n
  // Center only the top-level scene; per-part transforms and dimensions remain intact.
  const center=new THREE.Box3().setFromObject(root).getCenter(new THREE.Vector3());root.position.sub(center);root.updateMatrixWorld(true);
  fitModelGround(root);
- discoverModules();$('parts').replaceChildren(new Option('Виберіть деталь…',''),...parts.map(p=>new Option(p.name,String(p.id))));$('parts').disabled=!parts.length;$('empty').hidden=true;let diag=$('diagnostics');if(!diag){diag=document.createElement('p');diag.id='diagnostics';$('tools').querySelector('details').appendChild(diag);}diag.textContent=counts.unknown.length?'Невизначені поверхні залишено непрозорими ('+counts.unknown.length+'): '+[...new Set(counts.unknown)].join(', '):'Усі поверхні класифіковано.';if(model.userData.automaticHardwareCounts){const {hinge,rafix,cam,confirmat,dowel}=model.userData.automaticHardwareCounts;diag.textContent+=` Автоматично додано: петлі — ${hinge}, корпусні стяжки — ${rafix}, мініфікси — ${cam}, конфірмати — ${confirmat}, шканти — ${dowel}.`;}if(hardwareView.checked)applyMode();refresh();fit();}
+ discoverModules();$('parts').replaceChildren(new Option('Виберіть деталь…',''),...parts.map(p=>new Option(p.name,String(p.id))));$('parts').disabled=!parts.length;$('empty').hidden=true;let diag=$('diagnostics');if(!diag){diag=document.createElement('p');diag.id='diagnostics';$('tools').querySelector('details').appendChild(diag);}diag.textContent=counts.unknown.length?'Невизначені поверхні залишено непрозорими ('+counts.unknown.length+'): '+[...new Set(counts.unknown)].join(', '):'Усі поверхні класифіковано.';if(model.userData.automaticHardwareCounts){const {hinge,rafix,cam,confirmat,dowel,support}=model.userData.automaticHardwareCounts;diag.textContent+=` Автоматично додано: петлі — ${hinge}, корпусні стяжки — ${rafix}, мініфікси — ${cam}, конфірмати — ${confirmat}, шканти — ${dowel}, полицетримачі — ${support}.`;}if(hardwareView.checked)applyMode();refresh();fit();}
 let currentProject=[];
 async function projectEntries(files){const entries=[...files].map(file=>({path:file.webkitRelativePath||file.name,file}));if(entries.length===1&&/\.zip$/i.test(entries[0].path)){
  $('busy').textContent='Розпакування ZIP…';const {unzip}=await import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js');let total=0,count=0,tooLarge=false;
