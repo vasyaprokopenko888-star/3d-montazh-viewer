@@ -665,6 +665,18 @@ async function addAutomaticHardware(model,names){
      return aligned&&(Math.abs(lateral)<38&&Math.abs(depth-37)<8 ||
        alongX&&Math.abs(lateral+45.5)<2&&depth<2);
     });
+   if(!candidates.length&&!alongX){
+    // Some lift-up cup markers have an offset local origin. Match the arm to the plate.
+    const matches=hingePlates.map(plate=>plate.clone().applyMatrix4(inverse).multiplyScalar(millimetersPerUnit).sub(center))
+     .filter(delta=>Math.abs(delta.y)<3&&Math.abs(Math.abs(delta.x)-7)<2&&Math.abs(Math.abs(delta.z)-37)<8);
+    if(matches.length===1){
+     const delta=matches[0];
+     x.set(-Math.sign(delta.x),0,0);y.set(0,0,Math.sign(delta.z));z.set(0,1,0);
+     entry=center.clone().addScaledVector(x,-22.5).divideScalar(millimetersPerUnit);
+     hingeOffset=Math.round((delta.dot(x)+6.5)*10)/10;
+     hingeDepthOffset=Math.round((Math.abs(delta.z)-37)*10)/10;
+    }
+   }
    if(candidates.length===1){
     const plate=candidates[0];
     const depth=plate.z-center.z;
