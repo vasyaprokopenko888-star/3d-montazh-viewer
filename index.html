@@ -649,11 +649,17 @@ async function addAutomaticHardware(model,names){
   const x=new THREE.Vector3(),y=new THREE.Vector3(),z=new THREE.Vector3();
   let keys,entry,hingeOffset=0;
   let representedGuides=[];
-  if(kind==='hingecup'&&size.x>0&&size.y>0&&near(size.z,0)&&Math.abs(center.y)>.8){
-   x.set(0,Math.sign(center.y),0);y.set(0,0,1);z.set(-1,0,0);
+  if(kind==='hingecup'&&size.x>0&&size.y>0&&near(size.z,0)&&Math.hypot(center.x,center.y)>.8){
+   // ABF rotates the cup pattern in the facade plane for lift-up doors.
+   const alongX=Math.abs(center.x)>Math.abs(center.y);
+   if(alongX){
+    x.set(Math.sign(center.x),0,0);z.set(0,1,0);
+   }else{
+    x.set(0,Math.sign(center.y),0);z.set(-1,0,0);
+   }
+   y.set(0,0,1);
    const candidates=hingePlates.map(plate=>plate.clone().applyMatrix4(inverse).multiplyScalar(millimetersPerUnit))
-    .filter(plate=>Math.abs(plate.x-center.x)<3&&Math.abs(plate.y-center.y)<38&&Math.abs(Math.abs(plate.z-center.z)-37)<6)
-    .sort((a,b)=>Math.abs(a.x-center.x)-Math.abs(b.x-center.x));
+    .filter(plate=>Math.abs(plate.dot(z)-center.dot(z))<3&&Math.abs(plate.dot(x)-center.dot(x))<38&&Math.abs(Math.abs(plate.z-center.z)-37)<6);
    if(candidates.length===1){
     const plate=candidates[0];
     y.set(0,0,Math.sign(plate.z-center.z));
