@@ -647,7 +647,7 @@ async function addAutomaticHardware(model,names){
   const center=bounds.getCenter(new THREE.Vector3()).multiplyScalar(millimetersPerUnit);
   const near=(value,target)=>Math.abs(value-target)<.8;
   const x=new THREE.Vector3(),y=new THREE.Vector3(),z=new THREE.Vector3();
-  let keys,entry,hingeOffset=0;
+  let keys,entry,hingeOffset=0,hingeDepthOffset=0;
   let representedGuides=[];
   if(kind==='hingecup'&&size.x>0&&size.y>0&&near(size.z,0)&&Math.hypot(center.x,center.y)>.8){
    // ABF rotates the cup pattern in the facade plane for lift-up doors.
@@ -659,10 +659,17 @@ async function addAutomaticHardware(model,names){
    }
    y.set(0,0,1);
    const candidates=hingePlates.map(plate=>plate.clone().applyMatrix4(inverse).multiplyScalar(millimetersPerUnit))
-    .filter(plate=>Math.abs(plate.dot(z)-center.dot(z))<3&&Math.abs(plate.dot(x)-center.dot(x))<38&&Math.abs(Math.abs(plate.z-center.z)-37)<6);
+    .filter(plate=>{
+     const lateral=plate.dot(x)-center.dot(x),depth=Math.abs(plate.z-center.z);
+     const aligned=Math.abs(plate.dot(z)-center.dot(z))<3;
+     return aligned&&(Math.abs(lateral)<38&&Math.abs(depth-37)<8 ||
+       alongX&&Math.abs(lateral+45.5)<2&&depth<2);
+    });
    if(candidates.length===1){
     const plate=candidates[0];
-    y.set(0,0,Math.sign(plate.z-center.z));
+    const depth=plate.z-center.z;
+    y.set(0,0,depth<0?-1:1);
+    hingeDepthOffset=Math.round((Math.abs(depth)-37)*10)/10;
     hingeOffset=Math.round((plate.dot(x)-16)*10)/10;
    }
    keys=['hinge'];
@@ -779,7 +786,7 @@ async function addAutomaticHardware(model,names){
   const transform=new THREE.Matrix4().makeBasis(x,y,z).scale(new THREE.Vector3().setScalar(1/millimetersPerUnit));
   if(entry)transform.setPosition(entry);
   if(!guide)node.traverse(child=>{if(child.isLine)representedGuides.push(child);});
-  placements.push({node,keys,transform,representedGuides,hingeOffset});
+  placements.push({node,keys,transform,representedGuides,hingeOffset,hingeDepthOffset});
  }
  if(!placements.length)return;
  const minifixOrigins=placements.filter(({keys})=>keys[0]==='cam')
@@ -793,7 +800,7 @@ async function addAutomaticHardware(model,names){
  try{templates=await loadAutomaticHardwareTemplates();}catch(error){console.warn('Unable to load hardware templates',error);return;}
  const geometries=new Map();
  const added={hinge:0,rafix:0,cam:0,confirmat:0,dowel:0,support:0};
- for(const {node,keys,transform,representedGuides,hingeOffset} of placements){
+ for(const {node,keys,transform,representedGuides,hingeOffset,hingeDepthOffset} of placements){
   representedGuides.forEach(line=>line.userData.representedHardwareGuide=true);
   if(!keys.length)continue;
   added[keys[0]]++;
@@ -804,14 +811,15 @@ async function addAutomaticHardware(model,names){
   hardwareGroup.matrix.copy(node.matrix);
   node.parent.add(hardwareGroup);
   for(const key of keys){
-   const geometryKey=key==='hinge'?`hinge:${hingeOffset}`:key;
+   const geometryKey=key==='hinge'?`hinge:${hingeOffset}:${hingeDepthOffset}`:key;
    if(!geometries.has(geometryKey)){
     const geometry=templates.has(key)?templates.get(key).clone():key==='support'?new THREE.CylinderGeometry(2.5,2.5,20,32).rotateZ(-Math.PI/2).translate(3,0,0):makeEdgeFastener(key);
-    if(key==='hinge'&&hingeOffset){
+    if(key==='hinge'&&(hingeOffset||hingeDepthOffset)){
      const positions=geometry.getAttribute('position');
      for(let i=0;i<positions.count;i++){
       const weight=THREE.MathUtils.smoothstep(positions.getY(i),7,25);
       positions.setX(i,positions.getX(i)+hingeOffset*weight);
+      positions.setY(i,positions.getY(i)+hingeDepthOffset*weight);
      }
      positions.needsUpdate=true;
      geometry.computeVertexNormals();
